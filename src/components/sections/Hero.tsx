@@ -17,13 +17,13 @@ const Hero: React.FC = () => {
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-semibold tracking-tight text-balance animate-slide-up" style={{ animationDelay: "100ms" }}>
-              Buy & Sell with
+              Hey CU Eagles!
               <br />
-              <span className="text-primary">fellow students</span>
+              <span className="text-primary">Buy, Sell, Connect</span>
             </h1>
             
             <p className="text-lg text-muted-foreground max-w-lg mx-auto lg:mx-0 text-balance animate-slide-up" style={{ animationDelay: "200ms" }}>
-              Your safe and trusted marketplace exclusively for Covenant University students. Find everything from textbooks to electronics.
+              Your one-stop marketplace for CU students! Buy, sell, and connect with trusted students—because who else understands your needs better than your peers?
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2 animate-slide-up" style={{ animationDelay: "300ms" }}>
@@ -41,7 +41,7 @@ const Hero: React.FC = () => {
             </div>
             
             <div className="pt-2 animate-slide-up" style={{ animationDelay: "400ms" }}>
-              <SearchBar className="max-w-md mx-auto lg:mx-0" />
+              <SearchBar className="max-w-md mx-auto lg:mx-0" placeholder="What are you looking for? Textbooks, laptops..." />
             </div>
           </div>
           
@@ -49,7 +49,7 @@ const Hero: React.FC = () => {
             <div className="aspect-[4/3] md:aspect-square rounded-2xl overflow-hidden bg-secondary">
               <img
                 src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1471&q=80"
-                alt="Students collaborating"
+                alt="CU students collaborating"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -57,7 +57,7 @@ const Hero: React.FC = () => {
             <div className="absolute -bottom-6 -left-6 md:-bottom-8 md:-left-8 w-2/3 rounded-2xl overflow-hidden shadow-elevated animate-slide-in-right" style={{ animationDelay: "700ms" }}>
               <img
                 src="https://images.unsplash.com/photo-1560769629-975ec94e6a86?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=928&q=80"
-                alt="Student shopping"
+                alt="CU student shopping"
                 className="w-full aspect-video object-cover"
               />
             </div>

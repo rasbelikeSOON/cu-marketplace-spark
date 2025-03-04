@@ -25,10 +25,10 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({ products }) => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 md:mb-12">
           <div>
             <h2 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
-              Featured Products
+              Hot Deals from Fellow Eagles 🔥
             </h2>
             <p className="mt-2 text-muted-foreground max-w-md">
-              Popular items from fellow students that you might be interested in.
+              Check out what your fellow students are selling this week. Quality items at student-friendly prices!
             </p>
           </div>
           <Link to="/products">

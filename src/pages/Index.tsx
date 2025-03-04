@@ -6,7 +6,8 @@ import FeaturedProducts from "../components/sections/FeaturedProducts";
 import CategoriesSection from "../components/sections/CategoriesSection";
 import { products } from "../data/mockData";
 import { Button } from "../components/ui-components/Button";
-import { ShieldCheck, Repeat, MessageCircle } from "lucide-react";
+import { ShieldCheck, Repeat, MessageCircle, AlertTriangle } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const [activeCategory, setActiveCategory] = React.useState(1);
@@ -22,8 +23,30 @@ const Index = () => {
       
       <FeaturedProducts products={products.slice(0, 8)} />
       
+      {/* Safety Tips Section */}
+      <section className="py-16 bg-secondary/30">
+        <div className="container-custom">
+          <div className="flex flex-col md:flex-row gap-8 items-center bg-white p-6 md:p-8 rounded-2xl shadow-subtle">
+            <div className="flex-shrink-0 bg-primary/10 p-4 rounded-full">
+              <AlertTriangle className="h-10 w-10 text-primary" />
+            </div>
+            <div className="flex-grow">
+              <h3 className="text-xl font-semibold mb-2">Safety Reminder</h3>
+              <p className="text-muted-foreground">
+                We've got your back! Always verify sellers before making payments. Meet in public places on campus for transactions, and never share your banking PINs. No scams allowed!
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <Link to="/safety-tips">
+                <Button variant="outline" size="sm">Learn More</Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+      
       {/* Features Section */}
-      <section className="section-spacing bg-secondary/50">
+      <section className="section-spacing">
         <div className="container-custom">
           <div className="text-center mb-14">
             <h2 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
@@ -41,7 +64,7 @@ const Index = () => {
                 icon: <ShieldCheck className="h-8 w-8 text-primary" />,
                 title: "University-Verified Users",
                 description:
-                  "All users are verified with their Covenant University email, ensuring a trusted community of fellow students.",
+                  "All users are verified with their Covenant University email, ensuring a trusted community of fellow Eagles.",
               },
               {
                 icon: <MessageCircle className="h-8 w-8 text-primary" />,
@@ -53,7 +76,7 @@ const Index = () => {
                 icon: <Repeat className="h-8 w-8 text-primary" />,
                 title: "Sustainable Campus Economy",
                 description:
-                  "Reuse, recycle, and save money by buying and selling within our university community.",
+                  "Reuse, recycle, and save money by buying and selling within our CU community.",
               },
             ].map((feature, index) => (
               <div
@@ -79,17 +102,17 @@ const Index = () => {
             <div className="grid md:grid-cols-2 items-center">
               <div className="p-8 md:p-12 lg:p-16">
                 <h2 className="text-2xl md:text-3xl font-display font-semibold text-white mb-4">
-                  Ready to buy or sell?
+                  Got something to sell?
                 </h2>
                 <p className="text-primary-foreground/80 mb-8 max-w-md">
-                  Join our community of Covenant University students and start trading safely and conveniently on campus.
+                  List it now and reach hundreds of CU students in minutes! Fast, easy, and totally free.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Button className="bg-white text-primary hover:bg-white/90 shadow-subtle">
-                    Sign Up Now
+                    List Your Item
                   </Button>
                   <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
-                    Learn More
+                    How It Works
                   </Button>
                 </div>
               </div>
