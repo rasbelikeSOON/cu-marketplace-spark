@@ -5,7 +5,7 @@ import {
   Smartphone, Book, Shirt, Home, Gamepad, Dumbbell, 
   Rocket, Laptop, Headphones, Watch, FileText, PenTool, 
   ShoppingBag, Watch as WatchIcon, UtensilsCrossed, Package, 
-  Controller, Dice, Music, Dumbbell as DumbbellIcon, Trophy,
+  Gamepad as GamepadIcon, Dice1, Music, Dumbbell as DumbbellIcon, Trophy,
   Wine, Camera, Scissors, Pencil
 } from "lucide-react";
 
@@ -41,8 +41,8 @@ const categories: Category[] = [
   { id: 19, name: "Storage", icon: <Package size={16} /> },
   // Entertainment & Games
   { id: 20, name: "Entertainment", icon: <Gamepad size={16} /> },
-  { id: 21, name: "Gaming", icon: <Controller size={16} /> },
-  { id: 22, name: "Board Games", icon: <Dice size={16} /> },
+  { id: 21, name: "Gaming", icon: <GamepadIcon size={16} /> },
+  { id: 22, name: "Board Games", icon: <Dice1 size={16} /> },
   { id: 23, name: "Music & Movies", icon: <Music size={16} /> },
   // Sports & Fitness
   { id: 24, name: "Sports", icon: <Dumbbell size={16} /> },
