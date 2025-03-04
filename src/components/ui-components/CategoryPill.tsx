@@ -19,7 +19,7 @@ const CategoryPill: React.FC<CategoryPillProps> = ({
       className={`inline-flex items-center gap-2 py-2 px-4 rounded-full text-sm font-medium transition-all ease-apple ${
         isActive
           ? "bg-primary text-primary-foreground shadow-subtle"
-          : "bg-secondary text-foreground hover:bg-secondary/80"
+          : "bg-secondary/80 text-foreground hover:bg-secondary"
       }`}
       onClick={onClick}
     >

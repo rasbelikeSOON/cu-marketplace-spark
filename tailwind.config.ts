@@ -64,6 +64,11 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				covenant: {
+					purple: '#4B0082',
+					lavender: '#D1C4E9',
+					darkGray: '#333333',
+				},
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
