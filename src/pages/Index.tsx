@@ -64,7 +64,7 @@ const Index = () => {
                 icon: <ShieldCheck className="h-8 w-8 text-primary" />,
                 title: "University-Verified Users",
                 description:
-                  "All users are verified with their Covenant University email, ensuring a trusted community of fellow Eagles.",
+                  "All users are verified with their Covenant University email, ensuring a trusted community of fellow Kings and Queens.",
               },
               {
                 icon: <MessageCircle className="h-8 w-8 text-primary" />,

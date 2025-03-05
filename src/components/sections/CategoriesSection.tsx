@@ -69,7 +69,7 @@ const CategoriesSection: React.FC<CategoriesSectionProps> = ({
     <section className="py-8">
       <div className="container-custom">
         <h2 className="font-display text-lg md:text-xl font-medium mb-4">
-          What are you looking for today, Eagles? 🦅
+          What are you looking for today, Kings and Queens? 👑
         </h2>
         <div className="flex items-center overflow-x-auto pb-4 scrollbar-none space-x-3 animate-fade-in">
           {categories.map((category) => (

@@ -17,7 +17,7 @@ const Hero: React.FC = () => {
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-semibold tracking-tight text-balance animate-slide-up" style={{ animationDelay: "100ms" }}>
-              Hey CU Eagles!
+              Hey CU Kings and Queens!
               <br />
               <span className="text-primary">Buy, Sell, Connect</span>
             </h1>

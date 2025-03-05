@@ -16,7 +16,7 @@ const About = () => {
           </h1>
           <p className="text-muted-foreground text-lg">
             The premier online marketplace exclusively for Covenant University students.
-            Buy, sell, and connect with fellow Eagles in a safe and trusted environment.
+            Buy, sell, and connect with fellow Kings and Queens in a safe and trusted environment.
           </p>
         </div>
 
@@ -34,7 +34,7 @@ const About = () => {
             <h2 className="text-xl font-display font-semibold mb-4">Our Vision</h2>
             <p className="text-muted-foreground">
               To become the go-to marketplace for all CU students' needs, creating a vibrant
-              ecosystem where Eagles help Eagles, promoting resourcefulness, entrepreneurship,
+              ecosystem where Kings and Queens help Kings and Queens, promoting resourcefulness, entrepreneurship,
               and community building on campus.
             </p>
           </div>
@@ -96,7 +96,7 @@ const About = () => {
               {
                 question: "Who can use CU Marketplace?",
                 answer:
-                  "CU Marketplace is exclusively for Covenant University students. You must verify your account with a valid @stu.cu.edu.ng email address.",
+                  "CU Marketplace is exclusively for Covenant University students. You must verify your account with a valid Google account.",
               },
               {
                 question: "How do I list an item for sale?",
