@@ -68,6 +68,33 @@ export const productService = {
       .single();
     
     if (error) throw error;
+    
+    // Send notification about new product
+    if (data) {
+      try {
+        // Get the seller details for the notification
+        const { data: sellerData } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', userId)
+          .single();
+          
+        await supabase.functions.invoke('send-product-notification', {
+          body: { 
+            productTitle: data.title, 
+            productId: data.id,
+            sellerName: sellerData?.username || 'Unknown seller'
+          }
+        });
+        
+        // Optional: Send Telegram notifications to all users about new product
+        await notifyUsersAboutNewProduct(data, sellerData);
+      } catch (notifyError) {
+        // Just log the error but don't fail the product creation
+        console.error("Error sending product notification:", notifyError);
+      }
+    }
+    
     return data;
   },
   
@@ -111,3 +138,41 @@ export const productService = {
     return true;
   }
 };
+
+// Helper function to notify users about new products via Telegram
+async function notifyUsersAboutNewProduct(product: any, seller: any): Promise<void> {
+  try {
+    // Get all users who have linked their Telegram accounts
+    const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('id, telegram_id')
+      .not('telegram_id', 'is', null);
+    
+    if (error || !profiles) {
+      console.error("Error fetching profiles with Telegram IDs:", error);
+      return;
+    }
+    
+    // Send Telegram notification to each user
+    for (const profile of profiles) {
+      if (profile.telegram_id && profile.id !== product.seller_id) {
+        try {
+          await supabase.functions.invoke('send-telegram-notification', {
+            body: {
+              userId: profile.id,
+              notificationType: "new_product",
+              data: {
+                ...product,
+                seller
+              }
+            }
+          });
+        } catch (notifyError) {
+          console.error(`Error notifying user ${profile.id}:`, notifyError);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error in notifyUsersAboutNewProduct:", error);
+  }
+}

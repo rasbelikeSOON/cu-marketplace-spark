@@ -88,6 +88,19 @@ export const cartService = {
         .eq('product_id', productId)
         .maybeSingle();
       
+      // Get product details for notification
+      const { data: productData } = await supabase
+        .from('products')
+        .select(`
+          id, 
+          title, 
+          price, 
+          images,
+          seller:profiles(username)
+        `)
+        .eq('id', productId)
+        .single();
+      
       if (existingItem) {
         // Update quantity if item exists
         const { error } = await supabase
@@ -97,6 +110,15 @@ export const cartService = {
         
         if (error) throw error;
         toast.success("Cart updated successfully");
+        
+        // Send Telegram notification about cart update
+        if (productData) {
+          await sendTelegramNotification(user.id, "cart_update", {
+            action: "update",
+            product: productData,
+            quantity: existingItem.quantity + quantity
+          });
+        }
       } else {
         // Add new item if it doesn't exist
         const { error } = await supabase
@@ -109,6 +131,15 @@ export const cartService = {
         
         if (error) throw error;
         toast.success("Item added to cart");
+        
+        // Send Telegram notification about new item in cart
+        if (productData) {
+          await sendTelegramNotification(user.id, "cart_update", {
+            action: "add",
+            product: productData,
+            quantity
+          });
+        }
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
@@ -122,6 +153,14 @@ export const cartService = {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error("User not authenticated");
       
+      // Get cart item with product details
+      const { data: cartItem } = await supabase
+        .from('cart_items')
+        .select('*, product:products(id, title, price, images)')
+        .eq('id', itemId)
+        .eq('user_id', user.id)
+        .single();
+      
       const { error } = await supabase
         .from('cart_items')
         .update({ quantity })
@@ -130,6 +169,15 @@ export const cartService = {
       
       if (error) throw error;
       toast.success("Cart updated successfully");
+      
+      // Send Telegram notification
+      if (cartItem?.product) {
+        await sendTelegramNotification(user.id, "cart_update", {
+          action: "update",
+          product: cartItem.product,
+          quantity
+        });
+      }
     } catch (error) {
       console.error("Error updating cart:", error);
       toast.error("Failed to update cart");
@@ -142,6 +190,14 @@ export const cartService = {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error("User not authenticated");
       
+      // Get product details before deletion
+      const { data: cartItem } = await supabase
+        .from('cart_items')
+        .select('*, product:products(id, title, price, images)')
+        .eq('id', itemId)
+        .eq('user_id', user.id)
+        .single();
+      
       const { error } = await supabase
         .from('cart_items')
         .delete()
@@ -150,6 +206,14 @@ export const cartService = {
       
       if (error) throw error;
       toast.success("Item removed from cart");
+      
+      // Send Telegram notification
+      if (cartItem?.product) {
+        await sendTelegramNotification(user.id, "cart_update", {
+          action: "remove",
+          product: cartItem.product
+        });
+      }
     } catch (error) {
       console.error("Error removing from cart:", error);
       toast.error("Failed to remove item from cart");
@@ -175,3 +239,19 @@ export const cartService = {
     }
   }
 };
+
+// Helper function to send Telegram notifications
+async function sendTelegramNotification(userId: string, type: string, data: any): Promise<void> {
+  try {
+    await supabase.functions.invoke('send-telegram-notification', {
+      body: {
+        userId,
+        notificationType: type,
+        data
+      }
+    });
+  } catch (error) {
+    console.error("Failed to send Telegram notification:", error);
+    // Don't show toast error to user as this is a background notification
+  }
+}
