@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
@@ -10,6 +9,8 @@ import { ArrowLeft, Upload, Plus, X, HelpCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { categories } from "../data/mockData";
+import { productService } from "@/services/productService";
+import { useAuth } from "@/contexts/AuthContext";
 
 type ImageFile = {
   file: File;
@@ -29,6 +30,7 @@ const AddProduct = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -66,7 +68,7 @@ const AddProduct = () => {
     setImages(newImages);
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (images.length === 0) {
@@ -78,16 +80,47 @@ const AddProduct = () => {
       return;
     }
     
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to add products.",
+        variant: "destructive",
+      });
+      navigate('/signin');
+      return;
+    }
+    
     setIsSubmitting(true);
     
-    // Simulate form submission
-    setTimeout(() => {
+    try {
+      const productData = {
+        title: formData.title,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        category: formData.category,
+        condition: formData.condition,
+      };
+      
+      const imageFiles = images.map(img => img.file);
+      
+      await productService.createProduct(productData, imageFiles);
+      
       toast({
         title: "Product added successfully!",
         description: "Your product has been listed on the marketplace.",
       });
-      navigate("/seller-dashboard");
-    }, 1500);
+      
+      navigate("/products");
+      
+    } catch (error: any) {
+      toast({
+        title: "Error adding product",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (

@@ -1,12 +1,24 @@
 
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Search, ShoppingBag, User, Menu, X } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Search, ShoppingBag, User, Menu, X, LogOut, Plus } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui-components/Button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile, signOut } = useAuth();
 
   // Handle scroll effect for navbar
   useEffect(() => {
@@ -26,6 +38,11 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -73,6 +90,16 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               >
                 About
               </Link>
+              {user && (
+                <Link
+                  to="/add-product"
+                  className={`text-sm font-medium transition-all hover:text-primary ${
+                    location.pathname === "/add-product" ? "text-primary" : "text-foreground"
+                  }`}
+                >
+                  Sell
+                </Link>
+              )}
             </div>
 
             {/* Desktop Action Items */}
@@ -83,20 +110,46 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               >
                 <Search size={20} />
               </button>
-              <button
-                aria-label="Cart"
-                className="w-10 h-10 rounded-full flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors"
-              >
-                <ShoppingBag size={20} />
-              </button>
-              <Link to="/signin">
+              
+              <Link to="/cart">
                 <button
-                  aria-label="Account"
+                  aria-label="Cart"
                   className="w-10 h-10 rounded-full flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors"
                 >
-                  <User size={20} />
+                  <ShoppingBag size={20} />
                 </button>
               </Link>
+              
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                      {profile?.username?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || <User size={18} />}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate("/profile")}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/add-product")}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span>Sell Item</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sign out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Link to="/signin">
+                  <Button size="sm">Sign In</Button>
+                </Link>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -139,30 +192,67 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               >
                 About
               </Link>
+              {user && (
+                <Link
+                  to="/add-product"
+                  className="block text-lg font-medium hover:text-primary transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Sell
+                </Link>
+              )}
             </div>
 
-            <div className="flex items-center space-x-4 pt-6 border-t border-border">
-              <button
-                aria-label="Search"
-                className="w-12 h-12 rounded-full flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <Search size={24} />
-              </button>
-              <button
-                aria-label="Cart"
-                className="w-12 h-12 rounded-full flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <ShoppingBag size={24} />
-              </button>
-              <Link
-                to="/signin"
-                className="w-12 h-12 rounded-full flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <User size={24} />
-              </Link>
+            <div className="pt-6 border-t border-border">
+              {user ? (
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-medium">
+                      {profile?.username?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"}
+                    </div>
+                    <div>
+                      <p className="font-medium">{profile?.username || "User"}</p>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col space-y-2">
+                    <Button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        navigate("/profile");
+                      }}
+                      variant="outline"
+                      className="justify-start"
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Button>
+                    <Button
+                      onClick={handleSignOut}
+                      variant="outline"
+                      className="justify-start"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign out
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col space-y-3">
+                  <Link
+                    to="/signin"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Button className="w-full">Sign In</Button>
+                  </Link>
+                  <Link
+                    to="/signup"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Button variant="outline" className="w-full">Sign Up</Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
