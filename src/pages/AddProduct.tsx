@@ -11,6 +11,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import { categories } from "../data/mockData";
 
+type ImageFile = {
+  file: File;
+  preview: string;
+};
+
 const AddProduct = () => {
   const [formData, setFormData] = useState({
     title: "",
@@ -20,12 +25,12 @@ const AddProduct = () => {
     description: "",
   });
   
-  const [images, setImages] = useState([]);
+  const [images, setImages] = useState<ImageFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
@@ -33,7 +38,9 @@ const AddProduct = () => {
     });
   };
   
-  const handleImageUpload = (e) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    
     const files = Array.from(e.target.files);
     if (images.length + files.length > 5) {
       toast({
@@ -52,14 +59,14 @@ const AddProduct = () => {
     setImages([...images, ...newImages]);
   };
   
-  const removeImage = (index) => {
+  const removeImage = (index: number) => {
     const newImages = [...images];
     URL.revokeObjectURL(newImages[index].preview);
     newImages.splice(index, 1);
     setImages(newImages);
   };
   
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (images.length === 0) {

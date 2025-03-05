@@ -5,13 +5,26 @@ import MainLayout from "../layouts/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "../components/ui-components/Button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowRight, ShoppingCart, Minus, Plus, Trash2, AlertCircle, CreditCard } from "lucide-react";
+import { ArrowRight, ShoppingCart as ShoppingCartIcon, Minus, Plus, Trash2, AlertCircle, CreditCard } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 
-const CartItem = ({ item, updateQuantity, removeItem }) => {
+interface CartItemProps {
+  item: {
+    id: number;
+    title: string;
+    price: number;
+    image: string;
+    seller: string;
+    quantity: number;
+  };
+  updateQuantity: (id: number, quantity: number) => void;
+  removeItem: (id: number) => void;
+}
+
+const CartItem: React.FC<CartItemProps> = ({ item, updateQuantity, removeItem }) => {
   return (
     <div className="flex items-center py-4 border-b border-border last:border-0">
       <div className="h-20 w-20 rounded-md overflow-hidden mr-4">
@@ -81,13 +94,13 @@ const ShoppingCart = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   
-  const updateQuantity = (id, newQuantity) => {
+  const updateQuantity = (id: number, newQuantity: number) => {
     setCartItems(cartItems.map(item => 
       item.id === id ? {...item, quantity: newQuantity} : item
     ));
   };
   
-  const removeItem = (id) => {
+  const removeItem = (id: number) => {
     setCartItems(cartItems.filter(item => item.id !== id));
   };
   
@@ -115,7 +128,7 @@ const ShoppingCart = () => {
     }, 2000);
   };
   
-  const getStepLabel = (stepNumber, label) => {
+  const getStepLabel = (stepNumber: number, label: string) => {
     if (step === stepNumber) {
       return <span className="font-medium text-primary">{label}</span>;
     } else if (step > stepNumber) {
@@ -131,7 +144,7 @@ const ShoppingCart = () => {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-semibold flex items-center mb-2">
-              <ShoppingCart className="mr-2" /> 
+              <ShoppingCartIcon className="mr-2" /> 
               {step === 1 && "Shopping Cart"}
               {step === 2 && "Checkout"}
               {step === 3 && "Payment"}
@@ -152,7 +165,7 @@ const ShoppingCart = () => {
           {cartItems.length === 0 && step === 1 ? (
             <div className="text-center py-12">
               <div className="inline-block p-6 bg-secondary rounded-full mb-4">
-                <ShoppingCart size={48} className="text-muted-foreground" />
+                <ShoppingCartIcon size={48} className="text-muted-foreground" />
               </div>
               <h2 className="text-2xl font-medium mb-2">Your cart is empty</h2>
               <p className="text-muted-foreground mb-6">
