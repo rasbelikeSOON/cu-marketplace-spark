@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export const productService = {
@@ -145,11 +144,15 @@ async function notifyUsersAboutNewProduct(product: any, seller: any): Promise<vo
     // Get all users who have linked their Telegram accounts
     const { data: profiles, error } = await supabase
       .from('profiles')
-      .select('id, telegram_id')
-      .not('telegram_id', 'is', null);
+      .select('id, telegram_id');
     
-    if (error || !profiles) {
+    if (error) {
       console.error("Error fetching profiles with Telegram IDs:", error);
+      return;
+    }
+    
+    if (!profiles || profiles.length === 0) {
+      console.log("No profiles with Telegram IDs found");
       return;
     }
     
