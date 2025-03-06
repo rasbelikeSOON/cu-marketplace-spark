@@ -1,73 +1,41 @@
 
 import React from "react";
-import { Button } from "../ui-components/Button";
-import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import SearchBar from "../ui-components/SearchBar";
+import { ArrowRight } from "lucide-react";
+import { Button } from "../ui-components/Button";
 
-const Hero: React.FC = () => {
+const Hero = () => {
   return (
-    <section className="relative overflow-hidden pt-16 pb-20 md:pt-20 md:pb-28">
-      <div className="container-custom relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-6 items-center">
-          <div className="space-y-6 max-w-xl mx-auto lg:mx-0 text-center lg:text-left">
-            <div className="inline-flex items-center rounded-full py-1 px-4 gap-1.5 bg-primary/10 text-primary text-sm font-medium animate-fade-in">
-              <span className="inline-block w-2 h-2 rounded-full bg-primary"></span>
-              Exclusive to Covenant University
-            </div>
-            
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-semibold tracking-tight text-balance animate-slide-up" style={{ animationDelay: "100ms" }}>
-              Hey CU Kings and Queens!
-              <br />
-              <span className="text-primary">Buy, Sell, Connect</span>
-            </h1>
-            
-            <p className="text-lg text-muted-foreground max-w-lg mx-auto lg:mx-0 text-balance animate-slide-up" style={{ animationDelay: "200ms" }}>
-              Your one-stop marketplace for CU students! Buy, sell, and connect with trusted students—because who else understands your needs better than your peers?
-            </p>
-            
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2 animate-slide-up" style={{ animationDelay: "300ms" }}>
-              <Link to="/products">
-                <Button className="w-full sm:w-auto">
-                  Browse Products
-                  <ArrowRight size={16} className="ml-2" />
-                </Button>
-              </Link>
-              <Link to="/signin">
-                <Button variant="outline" className="w-full sm:w-auto">
-                  Sign Up/Login
-                </Button>
-              </Link>
-            </div>
-            
-            <div className="pt-2 animate-slide-up" style={{ animationDelay: "400ms" }}>
-              <SearchBar className="max-w-md mx-auto lg:mx-0" placeholder="What are you looking for? Textbooks, laptops..." />
-            </div>
-          </div>
-          
-          <div className="relative animate-fade-in" style={{ animationDelay: "500ms" }}>
-            <div className="aspect-[4/3] md:aspect-square rounded-2xl overflow-hidden bg-secondary">
-              <img
-                src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1471&q=80"
-                alt="CU students collaborating"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            
-            <div className="absolute -bottom-6 -left-6 md:-bottom-8 md:-left-8 w-2/3 rounded-2xl overflow-hidden shadow-elevated animate-slide-in-right" style={{ animationDelay: "700ms" }}>
-              <img
-                src="https://images.unsplash.com/photo-1560769629-975ec94e6a86?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=928&q=80"
-                alt="CU student shopping"
-                className="w-full aspect-video object-cover"
-              />
-            </div>
+    <section className="relative overflow-hidden bg-gradient-to-r from-indigo-50 to-purple-50 py-12 md:py-16 lg:py-20">
+      <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] bg-center opacity-5"></div>
+      <div className="container-custom">
+        <div className="mx-auto max-w-4xl text-center">
+          <h1 className="font-display font-semibold text-4xl md:text-5xl lg:text-6xl mb-6">
+            The Campus Marketplace for{" "}
+            <span className="bg-gradient-to-r from-primary to-covenant-purple bg-clip-text text-transparent">
+              Students
+            </span>
+          </h1>
+          <p className="text-muted-foreground text-lg md:text-xl max-w-3xl mx-auto mb-8">
+            Buy and sell items, connect with fellow students, and get the best
+            deals on campus. Covenant Marketplace is your one-stop shop for
+            everything you need.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/products">
+              <Button size="lg">
+                Browse Products
+                <ArrowRight className="ml-2" size={16} />
+              </Button>
+            </Link>
+            <Link to="/add-product">
+              <Button variant="secondary" size="lg">
+                Sell Something
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
-      
-      {/* Background Elements */}
-      <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-primary/5 rounded-bl-full -z-10" />
-      <div className="absolute bottom-0 left-0 w-1/4 h-1/4 bg-secondary rounded-tr-full -z-10" />
     </section>
   );
 };

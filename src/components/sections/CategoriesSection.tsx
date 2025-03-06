@@ -1,87 +1,55 @@
 
 import React from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, Book, Laptop, Sofa, Shirt, Utensils, Headphones } from "lucide-react";
+import { Button } from "../ui-components/Button";
 import CategoryPill from "../ui-components/CategoryPill";
-import { 
-  Smartphone, Book, Shirt, Home, Gamepad, Dumbbell, 
-  Rocket, Laptop, Headphones, Watch, FileText, PenTool, 
-  ShoppingBag, Watch as WatchIcon, UtensilsCrossed, Package, 
-  Gamepad as GamepadIcon, Dice1, Music, Dumbbell as DumbbellIcon, Trophy,
-  Wine, Camera, Scissors, Pencil
-} from "lucide-react";
 
-interface Category {
-  id: number;
-  name: string;
-  icon: React.ReactNode;
-}
-
-const categories: Category[] = [
-  { id: 1, name: "All", icon: <Home size={16} /> },
-  // Electronics & Gadgets
-  { id: 2, name: "Electronics", icon: <Smartphone size={16} /> },
-  { id: 3, name: "Phones & Tablets", icon: <Smartphone size={16} /> },
-  { id: 4, name: "Laptops & Accessories", icon: <Laptop size={16} /> },
-  { id: 5, name: "Headphones & Speakers", icon: <Headphones size={16} /> },
-  { id: 6, name: "Smartwatches", icon: <Watch size={16} /> },
-  // Books & Study Materials
-  { id: 7, name: "Books", icon: <Book size={16} /> },
-  { id: 8, name: "Textbooks", icon: <Book size={16} /> },
-  { id: 9, name: "Lecture Notes", icon: <FileText size={16} /> },
-  { id: 10, name: "Stationery", icon: <PenTool size={16} /> },
-  // Fashion & Accessories
-  { id: 11, name: "Fashion", icon: <Shirt size={16} /> },
-  { id: 12, name: "Clothing", icon: <Shirt size={16} /> },
-  { id: 13, name: "Shoes", icon: <ShoppingBag size={16} /> },
-  { id: 14, name: "Bags", icon: <ShoppingBag size={16} /> },
-  { id: 15, name: "Jewelry", icon: <WatchIcon size={16} /> },
-  // Home & Dorm Essentials
-  { id: 16, name: "Dorm Essentials", icon: <Home size={16} /> },
-  { id: 17, name: "Bedding", icon: <Home size={16} /> },
-  { id: 18, name: "Kitchenware", icon: <UtensilsCrossed size={16} /> },
-  { id: 19, name: "Storage", icon: <Package size={16} /> },
-  // Entertainment & Games
-  { id: 20, name: "Entertainment", icon: <Gamepad size={16} /> },
-  { id: 21, name: "Gaming", icon: <GamepadIcon size={16} /> },
-  { id: 22, name: "Board Games", icon: <Dice1 size={16} /> },
-  { id: 23, name: "Music & Movies", icon: <Music size={16} /> },
-  // Sports & Fitness
-  { id: 24, name: "Sports", icon: <Dumbbell size={16} /> },
-  { id: 25, name: "Gym Equipment", icon: <DumbbellIcon size={16} /> },
-  { id: 26, name: "Sports Gear", icon: <Trophy size={16} /> },
-  { id: 27, name: "Water Bottles", icon: <Wine size={16} /> },
-  // Services & Offers
-  { id: 28, name: "Services", icon: <Rocket size={16} /> },
-  { id: 29, name: "Photography", icon: <Camera size={16} /> },
-  { id: 30, name: "Beauty Services", icon: <Scissors size={16} /> },
-  { id: 31, name: "Academic Help", icon: <Pencil size={16} /> },
+const categories = [
+  { name: "Books", icon: Book, color: "bg-blue-100 text-blue-700" },
+  { name: "Electronics", icon: Laptop, color: "bg-purple-100 text-purple-700" },
+  { name: "Furniture", icon: Sofa, color: "bg-amber-100 text-amber-700" },
+  { name: "Clothing", icon: Shirt, color: "bg-green-100 text-green-700" },
+  { name: "Kitchen", icon: Utensils, color: "bg-rose-100 text-rose-700" },
+  { name: "Accessories", icon: Headphones, color: "bg-indigo-100 text-indigo-700" },
 ];
 
-interface CategoriesSectionProps {
-  activeCategory?: number;
-  onCategoryChange?: (categoryId: number) => void;
-}
-
-const CategoriesSection: React.FC<CategoriesSectionProps> = ({
-  activeCategory = 1,
-  onCategoryChange,
-}) => {
+const CategoriesSection = () => {
   return (
-    <section className="py-8">
+    <section className="py-12 md:py-20 bg-muted/30">
       <div className="container-custom">
-        <h2 className="font-display text-lg md:text-xl font-medium mb-4">
-          What are you looking for today, Kings and Queens? 👑
-        </h2>
-        <div className="flex items-center overflow-x-auto pb-4 scrollbar-none space-x-3 animate-fade-in">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <h2 className="text-2xl md:text-3xl font-display font-semibold mb-4">
+            Browse by Category
+          </h2>
+          <p className="text-muted-foreground">
+            Find exactly what you're looking for by browsing through our
+            categories
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {categories.map((category) => (
-            <div key={category.id} className="flex-none">
+            <Link 
+              key={category.name} 
+              to={`/products?category=${encodeURIComponent(category.name)}`}
+            >
               <CategoryPill
                 name={category.name}
-                icon={category.icon}
-                isActive={activeCategory === category.id}
-                onClick={() => onCategoryChange?.(category.id)}
+                Icon={category.icon}
+                color={category.color}
               />
-            </div>
+            </Link>
           ))}
+        </div>
+
+        <div className="mt-12 text-center">
+          <Link to="/products">
+            <Button variant="outline">
+              View All Categories
+              <ArrowRight className="ml-2" size={16} />
+            </Button>
+          </Link>
         </div>
       </div>
     </section>

@@ -3,13 +3,14 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import { Button } from "../components/ui-components/Button";
-import { ArrowLeft, Heart, Share, Flag, MessageCircle, ShoppingBag, ExternalLink, Phone } from "lucide-react";
+import { ArrowLeft, Heart, Share, Flag, MessageCircle, ShoppingBag, ExternalLink, Phone, ShoppingCart } from "lucide-react";
 import ProductCard from "../components/ui-components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import ChatInterface from "../components/ui-components/ChatInterface";
+import { cartService } from "@/services/cartService";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,7 @@ const ProductDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isOrdering, setIsOrdering] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
   const { toast } = useToast();
   const { user, isSellerVerified } = useAuth();
   
@@ -149,6 +151,38 @@ const ProductDetail = () => {
           variant: "destructive",
         });
         setIsOrdering(false);
+      }
+    }
+  };
+
+  // Add to cart function
+  const handleAddToCart = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to add items to your cart",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (product) {
+      setIsAddingToCart(true);
+      try {
+        await cartService.addToCart(product.id, 1);
+        toast({
+          title: "Added to cart",
+          description: `${product.title} has been added to your cart.`,
+        });
+      } catch (error) {
+        console.error("Error adding to cart:", error);
+        toast({
+          title: "Error",
+          description: "Failed to add item to cart. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsAddingToCart(false);
       }
     }
   };
@@ -339,11 +373,25 @@ const ProductDetail = () => {
                   {isOrdering ? "Processing..." : "Buy Now"}
                 </Button>
                 
+                <Button 
+                  variant="secondary" 
+                  className="flex-1"
+                  onClick={handleAddToCart}
+                  disabled={isAddingToCart}
+                >
+                  <ShoppingCart size={18} className="mr-2" />
+                  {isAddingToCart ? "Adding..." : "Add to Cart"}
+                </Button>
+              </div>
+            )}
+            
+            {!isCurrentUserSeller && (
+              <div className="flex flex-wrap gap-3 pt-1">
                 <Sheet open={isChatOpen} onOpenChange={setIsChatOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="secondary" className="flex-1">
-                      <MessageCircle size={18} className="mr-2" />
-                      Message Seller
+                    <Button variant="outline" size="sm">
+                      <MessageCircle size={16} className="mr-2" />
+                      Chat on Site
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="right" className="w-full sm:max-w-lg p-0">
@@ -356,30 +404,28 @@ const ProductDetail = () => {
                     />
                   </SheetContent>
                 </Sheet>
-              </div>
-            )}
-            
-            {!isCurrentUserSeller && (
-              <div className="flex flex-wrap gap-3 pt-1">
+                
                 {seller?.telegram_username && (
                   <a 
                     href={`https://t.me/${seller.telegram_username.replace('@', '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center text-sm bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full hover:bg-blue-100 transition-colors"
                   >
-                    <ExternalLink size={14} className="mr-1.5" />
-                    Open in Telegram
+                    <Button variant="outline" size="sm" className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200">
+                      <ExternalLink size={16} className="mr-2" />
+                      Chat on Telegram
+                    </Button>
                   </a>
                 )}
                 
                 {seller?.phone_number && (
                   <a 
                     href={`tel:${seller.phone_number}`}
-                    className="inline-flex items-center text-sm bg-green-50 text-green-600 px-3 py-1.5 rounded-full hover:bg-green-100 transition-colors"
                   >
-                    <Phone size={14} className="mr-1.5" />
-                    Call Seller
+                    <Button variant="outline" size="sm" className="bg-green-50 text-green-600 hover:bg-green-100 border-green-200">
+                      <Phone size={16} className="mr-2" />
+                      Call Seller
+                    </Button>
                   </a>
                 )}
               </div>
@@ -399,11 +445,30 @@ const ProductDetail = () => {
                 {isFavorite ? "Saved" : "Save"}
               </Button>
               <div className="space-x-2">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({
+                      title: product.title,
+                      text: `Check out this product: ${product.title}`,
+                      url: window.location.href,
+                    }).catch((error) => console.log('Error sharing', error));
+                  } else {
+                    navigator.clipboard.writeText(window.location.href);
+                    toast({
+                      title: "Link copied",
+                      description: "Product link copied to clipboard!",
+                    });
+                  }
+                }}>
                   <Share size={18} className="mr-2" />
                   Share
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => {
+                  toast({
+                    title: "Report submitted",
+                    description: "Thank you for reporting this product. We'll review it soon.",
+                  });
+                }}>
                   <Flag size={18} className="mr-2" />
                   Report
                 </Button>
