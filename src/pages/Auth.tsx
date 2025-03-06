@@ -10,11 +10,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isSeller, setIsSeller] = useState(false);
+  const [useMagicLink, setUseMagicLink] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -27,11 +29,12 @@ const Auth = () => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, signInWithMagicLink, user } = useAuth();
   
   // Check if we should show signup form based on URL
   useEffect(() => {
@@ -54,10 +57,12 @@ const Auth = () => {
       newErrors.email = "Email is invalid";
     }
     
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    if (!useMagicLink) {
+      if (!formData.password) {
+        newErrors.password = "Password is required";
+      } else if (formData.password.length < 6) {
+        newErrors.password = "Password must be at least 6 characters";
+      }
     }
     
     if (isSignUp && !formData.username) {
@@ -103,7 +108,19 @@ const Auth = () => {
     setIsLoading(true);
     
     try {
-      if (isSignUp) {
+      if (useMagicLink) {
+        // Sign in with magic link
+        const { error, data } = await signInWithMagicLink(formData.email);
+        
+        if (error) throw error;
+        
+        setEmailSent(true);
+        
+        toast({
+          title: "Check your email",
+          description: "We've sent you a magic link to sign in.",
+        });
+      } else if (isSignUp) {
         // Sign up with additional seller data if applicable
         const userData = {
           username: formData.username,
@@ -120,7 +137,7 @@ const Auth = () => {
           });
         }
         
-        const { error } = await signUp(
+        const { error, data } = await signUp(
           formData.email, 
           formData.password,
           userData
@@ -128,14 +145,12 @@ const Auth = () => {
         
         if (error) throw error;
         
-        toast({
-          title: "Account created!",
-          description: isSeller 
-            ? "Your seller account is pending verification. You'll be notified once approved."
-            : "Welcome to CU Marketplace.",
-        });
+        setEmailSent(true);
         
-        navigate("/");
+        toast({
+          title: "Check your email",
+          description: "Please check your email for a confirmation link to complete your registration.",
+        });
       } else {
         // Sign in
         const { error } = await signIn(formData.email, formData.password);
@@ -163,9 +178,43 @@ const Auth = () => {
   const toggleAuthMode = () => {
     setIsSignUp(!isSignUp);
     navigate(isSignUp ? "/signin" : "/signup");
-    // Reset errors when toggling
+    // Reset errors and email sent status when toggling
     setErrors({});
+    setEmailSent(false);
+    setUseMagicLink(false);
   };
+  
+  if (emailSent) {
+    return (
+      <MainLayout>
+        <div className="container-custom py-12 md:py-20">
+          <div className="max-w-md mx-auto">
+            <div className="bg-white rounded-2xl shadow-subtle p-8 text-center">
+              <Mail className="w-16 h-16 mx-auto text-primary" />
+              <h1 className="text-2xl font-display font-semibold mt-4">Check your email</h1>
+              <p className="mt-4 text-muted-foreground">
+                We've sent a {isSignUp ? "confirmation link" : "magic link"} to <span className="font-medium">{formData.email}</span>
+              </p>
+              <p className="mt-2 text-muted-foreground">
+                {isSignUp 
+                  ? "Please click the link in the email to verify your account."
+                  : "Click the link in the email to sign in to your account."}
+              </p>
+              <div className="mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setEmailSent(false)}
+                  className="w-full"
+                >
+                  Back to {isSignUp ? "sign up" : "sign in"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
   
   return (
     <MainLayout>
@@ -341,61 +390,91 @@ const Auth = () => {
                 )}
               </div>
               
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  {!isSignUp && (
-                    <a
-                      href="#"
-                      className="text-xs text-primary hover:underline"
-                      onClick={(e) => e.preventDefault()}
+              {!useMagicLink && (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    {!isSignUp && (
+                      <a
+                        href="#"
+                        className="text-xs text-primary hover:underline"
+                        onClick={(e) => e.preventDefault()}
+                      >
+                        Forgot password?
+                      </a>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={handleChange}
+                      className={`pl-10 ${errors.password ? "border-destructive" : ""}`}
+                      placeholder={isSignUp ? "Create a password" : "Enter your password"}
+                      autoComplete={isSignUp ? "new-password" : "current-password"}
+                    />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowPassword(!showPassword)}
                     >
-                      Forgot password?
-                    </a>
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-destructive text-sm">{errors.password}</p>
                   )}
                 </div>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={handleChange}
-                    className={`pl-10 ${errors.password ? "border-destructive" : ""}`}
-                    placeholder={isSignUp ? "Create a password" : "Enter your password"}
-                    autoComplete={isSignUp ? "new-password" : "current-password"}
-                  />
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="text-destructive text-sm">{errors.password}</p>
-                )}
-              </div>
+              )}
               
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <span className="mr-2">
-                      {isSignUp ? "Creating Account..." : "Signing In..."}
+                      {isSignUp ? "Creating Account..." : useMagicLink ? "Sending Link..." : "Signing In..."}
                     </span>
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent" />
                   </>
                 ) : (
-                  isSignUp ? "Create Account" : "Sign In"
+                  isSignUp ? "Create Account" : useMagicLink ? "Send Magic Link" : "Sign In"
                 )}
               </Button>
             </form>
+            
+            {!isSignUp && (
+              <>
+                <div className="mt-6">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <Separator />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white px-2 text-muted-foreground">
+                        Or continue with
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setUseMagicLink(!useMagicLink)}
+                    >
+                      {useMagicLink ? "Use Password" : "Use Magic Link"}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
             
             <div className="mt-6 text-center text-sm">
               <p className="text-muted-foreground">

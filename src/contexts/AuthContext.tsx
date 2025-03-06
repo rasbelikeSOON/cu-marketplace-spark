@@ -36,7 +36,8 @@ type AuthContextType = {
   profile: Profile | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any | null }>;
-  signUp: (email: string, password: string, userData?: any) => Promise<{ error: any | null }>;
+  signInWithMagicLink: (email: string) => Promise<{ error: any | null, data: any | null }>;
+  signUp: (email: string, password: string, userData?: any) => Promise<{ error: any | null, data: any | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   isSellerVerified: boolean;
@@ -90,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event);
         setSession(session);
         setUser(session?.user ?? null);
 
@@ -119,15 +121,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
+  const signInWithMagicLink = async (email: string) => {
+    const { data, error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin,
+      }
+    });
+    
+    return { data, error };
+  };
+
   const signUp = async (email: string, password: string, userData?: any) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: userData,
+        emailRedirectTo: window.location.origin,
       },
     });
-    return { error };
+
+    // If sign up was successful and no error, attempt to send a welcome email
+    if (!error && data.user) {
+      try {
+        await supabase.functions.invoke('send-welcome-email', {
+          body: { email, username: userData?.username || 'New User' }
+        });
+      } catch (emailError) {
+        console.error('Error sending welcome email:', emailError);
+        // We don't return this error as it's not critical for sign up
+      }
+    }
+
+    return { data, error };
   };
 
   const signOut = async () => {
@@ -141,6 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile,
     isLoading,
     signIn,
+    signInWithMagicLink,
     signUp,
     signOut,
     refreshProfile,
