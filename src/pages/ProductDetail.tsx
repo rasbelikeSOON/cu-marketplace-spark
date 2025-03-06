@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
-import { Button } from "../components/ui-components/Button";
+import { Button } from "../components/ui/button";
 import { ArrowLeft, Heart, Share, Flag, MessageCircle, ShoppingBag, ExternalLink, Phone, ShoppingCart } from "lucide-react";
 import ProductCard from "../components/ui-components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -498,6 +498,14 @@ const ProductDetail = () => {
                   />
                 </div>
               ))}
+            </div>
+            
+            <div className="mt-8 text-center">
+              <Link to="/products">
+                <Button variant="outline">
+                  Browse More Products
+                </Button>
+              </Link>
             </div>
           </div>
         )}

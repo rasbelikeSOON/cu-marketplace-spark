@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { chatService } from '@/services/chatService';
 import { useToast } from '@/hooks/use-toast';
 import { Send, ArrowLeft } from 'lucide-react';
-import { Button } from './Button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
