@@ -80,6 +80,44 @@ export type Database = {
           },
         ]
       }
+      chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          product_id: string | null
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          product_id?: string | null
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          product_id?: string | null
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
           content: string
@@ -236,6 +274,44 @@ export type Database = {
           },
         ]
       }
+      orders: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          id: string
+          product_id: string
+          seller_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          id?: string
+          product_id: string
+          seller_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+          seller_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post_tags: {
         Row: {
           created_at: string
@@ -361,24 +437,48 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          hall: string | null
           id: string
+          is_admin: boolean | null
+          is_verified_seller: boolean | null
+          matric_number: string | null
           nickname: string | null
+          phone_number: string | null
+          room_number: string | null
+          telegram_id: string | null
+          telegram_username: string | null
           updated_at: string
           username: string | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          hall?: string | null
           id: string
+          is_admin?: boolean | null
+          is_verified_seller?: boolean | null
+          matric_number?: string | null
           nickname?: string | null
+          phone_number?: string | null
+          room_number?: string | null
+          telegram_id?: string | null
+          telegram_username?: string | null
           updated_at?: string
           username?: string | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          hall?: string | null
           id?: string
+          is_admin?: boolean | null
+          is_verified_seller?: boolean | null
+          matric_number?: string | null
           nickname?: string | null
+          phone_number?: string | null
+          room_number?: string | null
+          telegram_id?: string | null
+          telegram_username?: string | null
           updated_at?: string
           username?: string | null
         }

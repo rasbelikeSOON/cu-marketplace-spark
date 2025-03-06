@@ -5,17 +5,25 @@ import MainLayout from "../layouts/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "../components/ui-components/Button";
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Phone, MessageCircle, School, Building } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSeller, setIsSeller] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     username: "",
+    phone_number: "",
+    telegram_username: "",
+    matric_number: "",
+    hall: "",
+    room_number: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +64,24 @@ const Auth = () => {
       newErrors.username = "Username is required";
     }
     
+    if (isSignUp && isSeller) {
+      if (!formData.phone_number) {
+        newErrors.phone_number = "Phone number is required for sellers";
+      }
+      if (!formData.telegram_username) {
+        newErrors.telegram_username = "Telegram username is required for sellers";
+      }
+      if (!formData.matric_number) {
+        newErrors.matric_number = "Matric number is required for sellers";
+      }
+      if (!formData.hall) {
+        newErrors.hall = "Hall is required for sellers";
+      }
+      if (!formData.room_number) {
+        newErrors.room_number = "Room number is required for sellers";
+      }
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -78,18 +104,35 @@ const Auth = () => {
     
     try {
       if (isSignUp) {
-        // Sign up
+        // Sign up with additional seller data if applicable
+        const userData = {
+          username: formData.username,
+          is_seller: isSeller,
+        };
+        
+        if (isSeller) {
+          Object.assign(userData, {
+            phone_number: formData.phone_number,
+            telegram_username: formData.telegram_username,
+            matric_number: formData.matric_number,
+            hall: formData.hall,
+            room_number: formData.room_number,
+          });
+        }
+        
         const { error } = await signUp(
           formData.email, 
           formData.password,
-          { username: formData.username }
+          userData
         );
         
         if (error) throw error;
         
         toast({
           title: "Account created!",
-          description: "Welcome to CU Marketplace.",
+          description: isSeller 
+            ? "Your seller account is pending verification. You'll be notified once approved."
+            : "Welcome to CU Marketplace.",
         });
         
         navigate("/");
@@ -142,25 +185,140 @@ const Auth = () => {
           <div className="bg-white rounded-2xl shadow-subtle p-8">
             <form onSubmit={handleSubmit} className="space-y-5">
               {isSignUp && (
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <div className="relative">
-                    <Input
-                      id="username"
-                      name="username"
-                      type="text"
-                      value={formData.username}
-                      onChange={handleChange}
-                      className={`pl-10 ${errors.username ? "border-destructive" : ""}`}
-                      placeholder="johndoe"
-                      autoComplete="username"
-                    />
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Username</Label>
+                    <div className="relative">
+                      <Input
+                        id="username"
+                        name="username"
+                        type="text"
+                        value={formData.username}
+                        onChange={handleChange}
+                        className={`pl-10 ${errors.username ? "border-destructive" : ""}`}
+                        placeholder="johndoe"
+                        autoComplete="username"
+                      />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    </div>
+                    {errors.username && (
+                      <p className="text-destructive text-sm">{errors.username}</p>
+                    )}
                   </div>
-                  {errors.username && (
-                    <p className="text-destructive text-sm">{errors.username}</p>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="is_seller" 
+                      checked={isSeller} 
+                      onCheckedChange={(checked) => setIsSeller(checked === true)}
+                    />
+                    <Label htmlFor="is_seller" className="text-sm font-medium">
+                      Register as a seller (requires verification)
+                    </Label>
+                  </div>
+                  
+                  {isSeller && (
+                    <div className="space-y-4 bg-muted p-4 rounded-lg mt-4">
+                      <h3 className="text-sm font-medium">Seller Information</h3>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="phone_number">Phone Number</Label>
+                        <div className="relative">
+                          <Input
+                            id="phone_number"
+                            name="phone_number"
+                            type="text"
+                            value={formData.phone_number}
+                            onChange={handleChange}
+                            className={`pl-10 ${errors.phone_number ? "border-destructive" : ""}`}
+                            placeholder="+234 800 000 0000"
+                          />
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        </div>
+                        {errors.phone_number && (
+                          <p className="text-destructive text-sm">{errors.phone_number}</p>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="telegram_username">Telegram Username</Label>
+                        <div className="relative">
+                          <Input
+                            id="telegram_username"
+                            name="telegram_username"
+                            type="text"
+                            value={formData.telegram_username}
+                            onChange={handleChange}
+                            className={`pl-10 ${errors.telegram_username ? "border-destructive" : ""}`}
+                            placeholder="@username"
+                          />
+                          <MessageCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        </div>
+                        {errors.telegram_username && (
+                          <p className="text-destructive text-sm">{errors.telegram_username}</p>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="matric_number">Matric Number</Label>
+                        <div className="relative">
+                          <Input
+                            id="matric_number"
+                            name="matric_number"
+                            type="text"
+                            value={formData.matric_number}
+                            onChange={handleChange}
+                            className={`pl-10 ${errors.matric_number ? "border-destructive" : ""}`}
+                            placeholder="19/0000"
+                          />
+                          <School className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        </div>
+                        {errors.matric_number && (
+                          <p className="text-destructive text-sm">{errors.matric_number}</p>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="hall">Hall</Label>
+                          <div className="relative">
+                            <Input
+                              id="hall"
+                              name="hall"
+                              type="text"
+                              value={formData.hall}
+                              onChange={handleChange}
+                              className={`pl-10 ${errors.hall ? "border-destructive" : ""}`}
+                              placeholder="Daniel Hall"
+                            />
+                            <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          </div>
+                          {errors.hall && (
+                            <p className="text-destructive text-sm">{errors.hall}</p>
+                          )}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="room_number">Room Number</Label>
+                          <div className="relative">
+                            <Input
+                              id="room_number"
+                              name="room_number"
+                              type="text"
+                              value={formData.room_number}
+                              onChange={handleChange}
+                              className={`${errors.room_number ? "border-destructive" : ""}`}
+                              placeholder="A101"
+                            />
+                          </div>
+                          {errors.room_number && (
+                            <p className="text-destructive text-sm">{errors.room_number}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </div>
+                </>
               )}
               
               <div className="space-y-2">

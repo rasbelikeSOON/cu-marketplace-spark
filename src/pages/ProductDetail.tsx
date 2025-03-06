@@ -3,22 +3,42 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import { Button } from "../components/ui-components/Button";
-import { ArrowLeft, Heart, Share, Flag, MessageCircle, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Heart, Share, Flag, MessageCircle, ShoppingBag, ExternalLink, Phone } from "lucide-react";
 import ProductCard from "../components/ui-components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
+import ChatInterface from "../components/ui-components/ChatInterface";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [activeImage, setActiveImage] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [product, setProduct] = useState<any>(null);
+  const [seller, setSeller] = useState<any>(null);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isOrdering, setIsOrdering] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isSellerVerified } = useAuth();
   
   // Fetch product data
   useEffect(() => {
@@ -30,13 +50,14 @@ const ProductDetail = () => {
           .from('products')
           .select(`
             *,
-            seller:profiles(id, username, avatar_url)
+            seller:profiles(id, username, avatar_url, phone_number, telegram_username, is_verified_seller)
           `)
           .eq('id', id)
           .single();
         
         if (productError) throw productError;
         setProduct(productData);
+        setSeller(productData.seller);
         
         // Fetch related products (same category, excluding current product)
         const { data: relatedData, error: relatedError } = await supabase
@@ -68,22 +89,67 @@ const ProductDetail = () => {
     }
   }, [id, toast]);
 
-  // Add to cart function
-  const addToCart = async () => {
+  // Buy now / place order function
+  const placeOrder = async () => {
     if (!user) {
       toast({
         title: "Authentication required",
-        description: "Please sign in to add items to your cart",
+        description: "Please sign in to purchase this item",
         variant: "destructive",
       });
       return;
     }
 
     if (product) {
-      toast({
-        title: "Added to cart",
-        description: `${product.title} has been added to your cart.`,
-      });
+      setIsOrdering(true);
+      try {
+        // Create an order
+        const { data, error } = await supabase
+          .from('orders')
+          .insert([
+            {
+              product_id: product.id,
+              buyer_id: user.id,
+              seller_id: product.seller_id,
+              status: 'pending'
+            }
+          ])
+          .select();
+        
+        if (error) throw error;
+        
+        // Notify the seller
+        try {
+          await supabase.functions.invoke('send-telegram-notification', {
+            body: {
+              userId: product.seller_id,
+              notificationType: "new_order",
+              data: {
+                productTitle: product.title,
+                buyerName: user.email, // Use email as fallback
+                orderId: data[0].id
+              }
+            }
+          });
+        } catch (notifyError) {
+          console.error("Error notifying seller:", notifyError);
+        }
+        
+        toast({
+          title: "Order placed",
+          description: `You've successfully placed an order for ${product.title}.`,
+        });
+        
+        setIsOrdering(false);
+      } catch (error) {
+        console.error("Error placing order:", error);
+        toast({
+          title: "Error",
+          description: "Failed to place order. Please try again.",
+          variant: "destructive",
+        });
+        setIsOrdering(false);
+      }
     }
   };
 
@@ -156,6 +222,9 @@ const ProductDetail = () => {
   const productImages = product.images && product.images.length > 0 
     ? product.images 
     : ["/placeholder.svg"];
+
+  // Check if current user is the seller
+  const isCurrentUserSeller = user && product.seller_id === user.id;
 
   return (
     <MainLayout>
@@ -243,27 +312,78 @@ const ProductDetail = () => {
             <div className="flex items-center space-x-4">
               <div>
                 <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground font-medium">
-                  {product.seller?.username?.[0] || product.seller?.id?.[0] || '?'}
+                  {seller?.username?.[0] || seller?.id?.[0] || '?'}
                 </div>
               </div>
-              <div>
-                <h3 className="font-medium">Seller: {product.seller?.username || "Anonymous"}</h3>
+              <div className="flex-grow">
+                <div className="flex items-center">
+                  <h3 className="font-medium">
+                    {seller?.username || "Anonymous"}
+                  </h3>
+                  {seller?.is_verified_seller && (
+                    <span className="ml-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                      Verified Seller
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-muted-foreground">
-                  Member since {new Date(product.seller?.created_at).toLocaleDateString()}
+                  Member since {new Date(seller?.created_at).toLocaleDateString()}
                 </p>
               </div>
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-4 pt-2">
-              <Button className="flex-1" onClick={addToCart}>
-                <ShoppingBag size={18} className="mr-2" />
-                Add to Cart
-              </Button>
-              <Button variant="secondary" className="flex-1">
-                <MessageCircle size={18} className="mr-2" />
-                Message Seller
-              </Button>
-            </div>
+            {!isCurrentUserSeller && (
+              <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                <Button className="flex-1" onClick={placeOrder} disabled={isOrdering}>
+                  <ShoppingBag size={18} className="mr-2" />
+                  {isOrdering ? "Processing..." : "Buy Now"}
+                </Button>
+                
+                <Sheet open={isChatOpen} onOpenChange={setIsChatOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="secondary" className="flex-1">
+                      <MessageCircle size={18} className="mr-2" />
+                      Message Seller
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-full sm:max-w-lg p-0">
+                    <ChatInterface 
+                      receiverId={product.seller_id} 
+                      receiverName={seller?.username || "Seller"}
+                      productId={product.id}
+                      productTitle={product.title}
+                      onBack={() => setIsChatOpen(false)}
+                    />
+                  </SheetContent>
+                </Sheet>
+              </div>
+            )}
+            
+            {!isCurrentUserSeller && (
+              <div className="flex flex-wrap gap-3 pt-1">
+                {seller?.telegram_username && (
+                  <a 
+                    href={`https://t.me/${seller.telegram_username.replace('@', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-sm bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full hover:bg-blue-100 transition-colors"
+                  >
+                    <ExternalLink size={14} className="mr-1.5" />
+                    Open in Telegram
+                  </a>
+                )}
+                
+                {seller?.phone_number && (
+                  <a 
+                    href={`tel:${seller.phone_number}`}
+                    className="inline-flex items-center text-sm bg-green-50 text-green-600 px-3 py-1.5 rounded-full hover:bg-green-100 transition-colors"
+                  >
+                    <Phone size={14} className="mr-1.5" />
+                    Call Seller
+                  </a>
+                )}
+              </div>
+            )}
             
             <div className="flex justify-between pt-2">
               <Button

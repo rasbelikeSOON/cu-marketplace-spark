@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export const productService = {
@@ -158,7 +159,7 @@ async function notifyUsersAboutNewProduct(product: any, seller: any): Promise<vo
     
     // Send Telegram notification to each user
     for (const profile of profiles) {
-      if (profile.telegram_id && profile.id !== product.seller_id) {
+      if (profile?.telegram_id && profile?.id !== product.seller_id) {
         try {
           await supabase.functions.invoke('send-telegram-notification', {
             body: {
