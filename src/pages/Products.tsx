@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { categories } from "../data/mockData";
@@ -19,7 +18,6 @@ const Products = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   
-  // Fetch products from Supabase
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
@@ -62,17 +60,14 @@ const Products = () => {
     setPriceRange(value);
   };
   
-  // Filter products based on category, search query, and price range
   useEffect(() => {
     let result = [...products];
     
-    // Filter by category
-    if (activeCategory !== 1) { // 1 is "All" category
+    if (activeCategory !== 1) {
       const categoryName = categories.find(cat => cat.id === activeCategory)?.name;
       result = result.filter(product => product.category === categoryName);
     }
     
-    // Filter by search query
     if (searchQuery) {
       result = result.filter(product => 
         product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -81,7 +76,6 @@ const Products = () => {
       );
     }
     
-    // Filter by price range
     result = result.filter(product => 
       product.price >= priceRange[0] && product.price <= priceRange[1]
     );
@@ -89,7 +83,6 @@ const Products = () => {
     setFilteredProducts(result);
   }, [activeCategory, searchQuery, priceRange, products]);
 
-  // Product loading skeleton
   const ProductSkeleton = () => (
     <div className="bg-white rounded-2xl overflow-hidden shadow-subtle">
       <Skeleton className="h-48 w-full" />
@@ -127,7 +120,6 @@ const Products = () => {
         />
         
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-6">
-          {/* Filters Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl p-6 shadow-subtle sticky top-24">
               <h3 className="font-semibold mb-4">Filter by Price</h3>
@@ -191,7 +183,6 @@ const Products = () => {
             </div>
           </div>
           
-          {/* Products Grid */}
           <div className="lg:col-span-3">
             {isLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

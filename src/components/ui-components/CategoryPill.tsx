@@ -6,6 +6,7 @@ interface CategoryPillProps {
   icon?: React.ReactNode;
   isActive?: boolean;
   onClick?: () => void;
+  color?: string;
 }
 
 const CategoryPill: React.FC<CategoryPillProps> = ({
@@ -13,6 +14,7 @@ const CategoryPill: React.FC<CategoryPillProps> = ({
   icon,
   isActive = false,
   onClick,
+  color,
 }) => {
   return (
     <button
