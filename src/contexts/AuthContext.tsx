@@ -37,6 +37,7 @@ type AuthContextType = {
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any | null }>;
   signInWithMagicLink: (email: string) => Promise<{ error: any | null, data: any | null }>;
+  signInWithGoogle: () => Promise<{ error: any | null, data: any | null }>;
   signUp: (email: string, password: string, userData?: any) => Promise<{ error: any | null, data: any | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -125,7 +126,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: window.location.origin + '/signin',
+      }
+    });
+    
+    return { data, error };
+  };
+
+  const signInWithGoogle = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + '/signin',
       }
     });
     
@@ -138,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       options: {
         data: userData,
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: window.location.origin + '/signin',
       },
     });
 
@@ -169,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     signIn,
     signInWithMagicLink,
+    signInWithGoogle,
     signUp,
     signOut,
     refreshProfile,
