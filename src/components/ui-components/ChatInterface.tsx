@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { chatService } from '@/services/chatService';
@@ -8,6 +7,7 @@ import { Button } from './Button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ChatInterfaceProps {
   receiverId: string;
@@ -32,7 +32,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load chat history
   useEffect(() => {
     const loadMessages = async () => {
       if (!user || !receiverId) return;
@@ -56,7 +55,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     
     loadMessages();
     
-    // Set up real-time subscription
     const channel = supabase
       .channel('chat-updates')
       .on(
@@ -68,9 +66,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           filter: `receiver_id=eq.${user?.id}`,
         },
         (payload) => {
-          // Only add message if it's from the current chat
           if (payload.new.sender_id === receiverId) {
-            // Fetch the full message with sender/receiver info
             chatService.getChatHistory(receiverId, productId).then((data) => {
               setMessages(data);
               chatService.markAsRead(receiverId);
@@ -85,7 +81,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     };
   }, [user, receiverId, productId, toast]);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
