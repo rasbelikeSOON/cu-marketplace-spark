@@ -1,6 +1,4 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,97 +6,95 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 240 10% 15%;
+    --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 15%;
+    --card-foreground: 222.2 84% 4.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 15%;
+    --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 277 100% 25%;  /* Deep Purple: #4B0082 */
-    --primary-foreground: 0 0% 100%;
+    --primary: 271 90% 26%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 270 36% 84%;  /* Lavender: #D1C4E9 */
-    --secondary-foreground: 240 10% 15%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 270 20% 94%;
-    --muted-foreground: 240 10% 45%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 270 36% 84%;
-    --accent-foreground: 240 10% 15%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 270 20% 90%;
-    --input: 270 20% 90%;
-    --ring: 277 100% 25%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 271 90% 26%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
   }
 
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 273 73% 82%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 273 73% 82%;
+  }
+}
+
+@layer base {
   * {
     @apply border-border;
   }
 
-  html {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    scroll-behavior: smooth;
-  }
-
   body {
-    @apply bg-background text-foreground font-sans;
-  }
-
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    @apply bg-secondary rounded-full;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/30 rounded-full transition-colors;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/50;
+    @apply bg-background text-foreground;
+    overflow-x: hidden;
   }
 }
 
-@layer components {
-  .container-custom {
-    @apply w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8;
-  }
-
-  .text-balance {
-    text-wrap: balance;
-  }
-
-  .glass-morphism {
-    @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-subtle;
-  }
-
-  .section-spacing {
-    @apply py-16 md:py-24;
-  }
-  
-  .page-transition-container {
-    @apply animate-fade-in;
-  }
-
-  .hover-scale {
-    @apply transition-transform duration-300 ease-apple hover:scale-[1.03] active:scale-[0.98];
-  }
+/* Global Container Custom */
+.container-custom {
+  @apply container max-w-7xl px-4 md:px-6 mx-auto;
 }
 
-@layer utilities {
-  .text-shadow-sm {
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+/* Page Transitions */
+.page-transition-container {
+  animation: pageTransition 0.3s ease-out;
+}
+
+@keyframes pageTransition {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
