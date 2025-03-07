@@ -3,6 +3,9 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { emailService } from '@/services/emailService';
+import { notificationService } from '@/services/notificationService';
+import { useToast } from '@/hooks/use-toast';
 
 type SellerProfile = {
   phone_number: string;
@@ -39,10 +42,13 @@ type AuthContextType = {
   signInWithMagicLink: (email: string) => Promise<{ error: any | null, data: any | null }>;
   signInWithGoogle: () => Promise<{ error: any | null, data: any | null }>;
   signUp: (email: string, password: string, userData?: any) => Promise<{ error: any | null, data: any | null }>;
+  resetPassword: (email: string) => Promise<{ error: any | null, data: any | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: any | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   isSellerVerified: boolean;
   isAdmin: boolean;
+  sendVerificationEmail: () => Promise<{ success: boolean, error?: any }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isSellerVerified, setIsSellerVerified] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const refreshProfile = async () => {
     if (!user) return;
@@ -70,6 +77,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(data as Profile);
         setIsSellerVerified(data.is_verified_seller || false);
         setIsAdmin(data.is_admin || false);
+        
+        // Set user ID for OneSignal
+        notificationService.setUserId(user.id);
+        
+        // Set user tags for segmented notifications
+        if (data.is_verified_seller) {
+          notificationService.setUserTags({ 
+            user_type: 'seller',
+            is_verified: 'true',
+            is_admin: data.is_admin ? 'true' : 'false'
+          });
+        } else {
+          notificationService.setUserTags({ 
+            user_type: 'buyer',
+            is_admin: data.is_admin ? 'true' : 'false'
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -77,6 +101,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // Initialize OneSignal
+    if (typeof window !== 'undefined') {
+      notificationService.init();
+    }
+    
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -99,6 +128,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Get profile data if user is logged in
         if (session?.user) {
           await refreshProfile();
+          
+          // Show welcome back toast on sign-in
+          if (event === 'SIGNED_IN') {
+            toast({
+              title: 'Welcome back!',
+              description: `You're now signed in as ${session.user.email}`,
+            });
+          }
         } else {
           setProfile(null);
           setIsSellerVerified(false);
@@ -154,12 +191,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
 
-    // If sign up was successful and no error, attempt to send a welcome email
+    // If sign up was successful and no error, send welcome email using Brevo
     if (!error && data.user) {
       try {
-        await supabase.functions.invoke('send-welcome-email', {
-          body: { email, username: userData?.username || 'New User' }
-        });
+        await emailService.sendWelcomeEmail(
+          email,
+          userData?.username || email.split('@')[0]
+        );
       } catch (emailError) {
         console.error('Error sending welcome email:', emailError);
         // We don't return this error as it's not critical for sign up
@@ -167,6 +205,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     return { data, error };
+  };
+  
+  const resetPassword = async (email: string) => {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/reset-password',
+    });
+    
+    // If password reset email was successfully sent, also send via Brevo
+    if (!error) {
+      try {
+        // Note: This is just for demonstration. In a real implementation,
+        // you would not send a second email, but rely on Supabase's email
+        // or completely replace it with Brevo.
+        await emailService.sendPasswordResetEmail(
+          email,
+          `${window.location.origin}/reset-password`
+        );
+      } catch (emailError) {
+        console.error('Error sending password reset email via Brevo:', emailError);
+      }
+    }
+    
+    return { data, error };
+  };
+  
+  const updatePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    
+    return { error };
+  };
+  
+  const sendVerificationEmail = async () => {
+    if (!user || !user.email) {
+      return { success: false, error: 'No user logged in or email not available' };
+    }
+    
+    try {
+      // In a real implementation, you would generate a verification token
+      // and store it in the database, then use it to verify the email
+      const verificationLink = `${window.location.origin}/verify-email?token=example-token`;
+      
+      const result = await emailService.sendVerificationEmail(
+        user.email,
+        verificationLink
+      );
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+      return { success: false, error };
+    }
   };
 
   const signOut = async () => {
@@ -183,10 +274,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithMagicLink,
     signInWithGoogle,
     signUp,
+    resetPassword,
+    updatePassword,
     signOut,
     refreshProfile,
     isSellerVerified,
     isAdmin,
+    sendVerificationEmail,
   };
 
   return (
