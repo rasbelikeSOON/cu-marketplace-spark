@@ -1,407 +1,830 @@
 
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import MainLayout from "../layouts/MainLayout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "../components/ui-components/Button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Package, PlusCircle, DollarSign, ShoppingCart, Settings, LogOut, Tag, Clock, ChevronRight, Edit, Trash2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import MainLayout from '../layouts/MainLayout';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '../components/ui-components/Button';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+import { 
+  ShoppingBag, 
+  Package, 
+  BarChart4, 
+  MessageSquare, 
+  Star, 
+  Users, 
+  TrendingUp,
+  DollarSign,
+  Percent,
+  AlertTriangle,
+  Plus
+} from 'lucide-react';
+
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE'];
 
 const SellerDashboard = () => {
-  const [activeTab, setActiveTab] = useState("listings");
+  const { user, profile, isSellerVerified } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isLoading, setIsLoading] = useState(true);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [lowStockProducts, setLowStockProducts] = useState<any[]>([]);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [analytics, setAnalytics] = useState({
+    dailySales: [] as any[],
+    categorySales: [] as any[],
+    orderStatus: [] as any[],
+  });
 
-  // Mock data for products
-  const products = [
-    {
-      id: 1,
-      title: "MacBook Pro 2022",
-      price: 450000,
-      image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1026&q=80",
-      status: "Active",
-      views: 125,
-      likes: 18,
-      dateAdded: "2023-09-15",
-    },
-    {
-      id: 5,
-      title: "Graphic Design Services",
-      price: 15000,
-      image: "https://images.unsplash.com/photo-1626785774573-4b799315345d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1171&q=80",
-      status: "Active",
-      views: 87,
-      likes: 32,
-      dateAdded: "2023-09-02",
-    },
-  ];
-
-  // Mock data for orders
-  const orders = [
-    {
-      id: "ORD-001",
-      date: "2023-10-15",
-      product: "MacBook Pro 2022",
-      buyer: "Sarah Adams",
-      amount: 450000,
-      status: "Completed",
-    },
-    {
-      id: "ORD-003",
-      date: "2023-10-08",
-      product: "Graphic Design Services",
-      buyer: "Emmanuel Tech",
-      amount: 15000,
-      status: "Processing",
-    },
-  ];
-
-  const handleDeleteProduct = (id: number) => {
-    toast({
-      title: "Product deleted",
-      description: "The product has been removed from your listings.",
+  useEffect(() => {
+    const fetchSellerData = async () => {
+      if (!user || !isSellerVerified) return;
+      
+      setIsLoading(true);
+      try {
+        // Fetch seller's products
+        const { data: productsData, error: productsError } = await supabase
+          .from('products')
+          .select('*')
+          .eq('seller_id', user.id);
+        
+        if (productsError) throw productsError;
+        
+        // Fetch seller's orders
+        const { data: ordersData, error: ordersError } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            product:products(*),
+            buyer:profiles(id, username, avatar_url)
+          `)
+          .eq('seller_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (ordersError) throw ordersError;
+        
+        setProducts(productsData || []);
+        setOrders(ordersData || []);
+        
+        // Calculate total revenue
+        const revenue = ordersData
+          ?.filter(order => order.status !== 'cancelled')
+          ?.reduce((sum, order) => sum + Number(order.product?.price || 0), 0) || 0;
+        
+        setTotalRevenue(revenue);
+        
+        // Generate mock analytics data (in a real app, this would come from actual data)
+        generateAnalytics(ordersData || [], productsData || []);
+        
+        // Check for low stock products (since we don't have a stock field yet, this is simulated)
+        // In a real app, you'd have a stock field and check products with stock < 5
+        setLowStockProducts(
+          productsData
+            ?.filter((_, index) => index % 3 === 0) // Just a simulation, every 3rd product is "low stock"
+            ?.slice(0, 3) || []
+        );
+      } catch (error) {
+        console.error("Error fetching seller data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load your seller dashboard. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchSellerData();
+  }, [user, isSellerVerified, toast]);
+  
+  // Generate mock analytics data (in a real app, this would be actual data)
+  const generateAnalytics = (ordersData: any[], productsData: any[]) => {
+    // Daily sales for the past week
+    const dailySales = [];
+    const categories: Record<string, number> = {};
+    const statusCounts: Record<string, number> = { 
+      pending: 0, 
+      completed: 0, 
+      cancelled: 0 
+    };
+    
+    // Get date 7 days ago
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 7);
+    
+    // Initialize daily sales data
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      
+      dailySales.push({
+        date: dateStr,
+        sales: 0,
+        orders: 0
+      });
+    }
+    
+    // Fill in daily sales data from orders
+    ordersData.forEach(order => {
+      // Count order statuses
+      if (order.status) {
+        statusCounts[order.status] = (statusCounts[order.status] || 0) + 1;
+      }
+      
+      // Skip if cancelled
+      if (order.status === 'cancelled') return;
+      
+      // Count category sales
+      const category = order.product?.category || 'Other';
+      categories[category] = (categories[category] || 0) + Number(order.product?.price || 0);
+      
+      // Only count orders from the past week
+      const orderDate = new Date(order.created_at);
+      if (orderDate >= startDate) {
+        const dateStr = orderDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const dayIndex = dailySales.findIndex(d => d.date === dateStr);
+        
+        if (dayIndex !== -1) {
+          dailySales[dayIndex].sales += Number(order.product?.price || 0);
+          dailySales[dayIndex].orders += 1;
+        }
+      }
+    });
+    
+    // Convert categories object to array
+    const categorySales = Object.entries(categories).map(([name, value]) => ({
+      name,
+      value: Number(value.toFixed(2))
+    }));
+    
+    // Convert status counts to array
+    const orderStatus = Object.entries(statusCounts).map(([name, value]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      value
+    }));
+    
+    setAnalytics({
+      dailySales,
+      categorySales,
+      orderStatus
     });
   };
+  
+  const handleAddProduct = () => {
+    navigate('/add-product');
+  };
+  
+  const handleViewProduct = (productId: string) => {
+    navigate(`/product/${productId}`);
+  };
+  
+  const handleUpdateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', orderId);
+      
+      if (error) throw error;
+      
+      // Update the local state
+      setOrders(orders.map(order => 
+        order.id === orderId ? { ...order, status } : order
+      ));
+      
+      toast({
+        title: "Order Updated",
+        description: `Order status changed to ${status}.`
+      });
+      
+      // Regenerate analytics
+      generateAnalytics(
+        orders.map(order => order.id === orderId ? { ...order, status } : order),
+        products
+      );
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update order status. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (!user) {
+    return (
+      <MainLayout>
+        <div className="container-custom py-12">
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p>Please sign in to view the seller dashboard.</p>
+              <Button onClick={() => navigate('/signin')} className="mt-4">Sign In</Button>
+            </CardContent>
+          </Card>
+        </div>
+      </MainLayout>
+    );
+  }
+  
+  if (!isSellerVerified) {
+    return (
+      <MainLayout>
+        <div className="container-custom py-12">
+          <Card>
+            <CardContent className="p-8 text-center">
+              <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Seller Account Not Verified</h2>
+              <p className="text-muted-foreground mb-4">
+                Your seller account is currently pending verification. Once approved, you'll gain access to the seller dashboard.
+              </p>
+              <Button onClick={() => navigate('/profile')} className="mt-2">
+                Go to Profile
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
-      <div className="container-custom py-12">
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Sidebar */}
-          <div className="w-full md:w-64 shrink-0">
-            <div className="bg-white rounded-xl shadow-subtle p-6 mb-6">
-              <div className="flex items-center space-x-4 mb-6">
-                <Avatar className="h-16 w-16 border-2 border-primary">
-                  <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80" />
-                  <AvatarFallback>DM</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h2 className="font-semibold">David Miller</h2>
-                  <p className="text-sm text-muted-foreground">Seller Account</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2 mb-6">
-                <Card className="p-3">
-                  <div className="text-xs text-muted-foreground">Products</div>
-                  <div className="font-semibold text-lg">2</div>
-                </Card>
-                <Card className="p-3">
-                  <div className="text-xs text-muted-foreground">Sales</div>
-                  <div className="font-semibold text-lg">₦465K</div>
-                </Card>
-              </div>
-              
-              <nav className="space-y-1">
-                <button 
-                  onClick={() => setActiveTab("listings")} 
-                  className={`w-full flex items-center space-x-2 p-2 rounded-lg text-left ${activeTab === "listings" ? "bg-primary/10 text-primary" : "hover:bg-secondary"}`}
-                >
-                  <Tag size={18} />
-                  <span>My Listings</span>
-                </button>
-                <button 
-                  onClick={() => setActiveTab("orders")} 
-                  className={`w-full flex items-center space-x-2 p-2 rounded-lg text-left ${activeTab === "orders" ? "bg-primary/10 text-primary" : "hover:bg-secondary"}`}
-                >
-                  <ShoppingCart size={18} />
-                  <span>Orders</span>
-                </button>
-                <button 
-                  onClick={() => setActiveTab("earnings")} 
-                  className={`w-full flex items-center space-x-2 p-2 rounded-lg text-left ${activeTab === "earnings" ? "bg-primary/10 text-primary" : "hover:bg-secondary"}`}
-                >
-                  <DollarSign size={18} />
-                  <span>Earnings</span>
-                </button>
-                <button 
-                  onClick={() => setActiveTab("settings")} 
-                  className={`w-full flex items-center space-x-2 p-2 rounded-lg text-left ${activeTab === "settings" ? "bg-primary/10 text-primary" : "hover:bg-secondary"}`}
-                >
-                  <Settings size={18} />
-                  <span>Settings</span>
-                </button>
-              </nav>
-              
-              <div className="mt-6 pt-6 border-t border-border">
-                <Link to="/user-dashboard">
-                  <button className="w-full flex items-center justify-center space-x-2 p-2 bg-primary/10 text-primary rounded-lg mb-2">
-                    <User size={18} />
-                    <span>Switch to Buyer</span>
-                  </button>
-                </Link>
-                <button className="w-full flex items-center space-x-2 p-2 text-red-500 hover:bg-red-50 rounded-lg">
-                  <LogOut size={18} />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            </div>
-          </div>
+      <div className="container-custom py-6 md:py-12">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <h1 className="text-2xl md:text-3xl font-display font-semibold">Seller Dashboard</h1>
+          <Button onClick={handleAddProduct}>
+            <Plus className="h-4 w-4 mr-2" /> Add New Product
+          </Button>
+        </div>
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid grid-cols-3 md:grid-cols-5 mb-6">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="orders">Orders</TabsTrigger>
+            <TabsTrigger value="products">Products</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="promotions">Promotions</TabsTrigger>
+          </TabsList>
           
-          {/* Main Content */}
-          <div className="flex-1">
-            {activeTab === "listings" && (
-              <>
-                <div className="flex justify-between items-center mb-6">
-                  <h1 className="text-2xl font-semibold">My Listings</h1>
-                  <Link to="/add-product">
-                    <Button>
-                      <PlusCircle size={16} className="mr-2" />
-                      Add New Product
-                    </Button>
-                  </Link>
-                </div>
-                
-                <div className="space-y-4">
-                  {products.map((product) => (
-                    <Card key={product.id} className="overflow-hidden">
-                      <div className="flex flex-col md:flex-row">
-                        <div className="w-full md:w-1/4 h-48 md:h-auto">
-                          <img 
-                            src={product.image} 
-                            alt={product.title} 
-                            className="h-full w-full object-cover"
-                          />
+          <TabsContent value="overview" className="space-y-6">
+            {/* Stats Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Revenue</p>
+                      <h3 className="text-2xl font-bold mt-1">₦{totalRevenue.toLocaleString()}</h3>
+                    </div>
+                    <div className="bg-primary/10 p-3 rounded-full">
+                      <DollarSign className="h-5 w-5 text-primary" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Products</p>
+                      <h3 className="text-2xl font-bold mt-1">{products.length}</h3>
+                    </div>
+                    <div className="bg-primary/10 p-3 rounded-full">
+                      <Package className="h-5 w-5 text-primary" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Orders</p>
+                      <h3 className="text-2xl font-bold mt-1">{orders.length}</h3>
+                    </div>
+                    <div className="bg-primary/10 p-3 rounded-full">
+                      <ShoppingBag className="h-5 w-5 text-primary" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Conversion Rate</p>
+                      <h3 className="text-2xl font-bold mt-1">
+                        {orders.length > 0 && products.length > 0 
+                          ? `${Math.round((orders.length / (products.length * 3)) * 100)}%` 
+                          : '0%'}
+                      </h3>
+                    </div>
+                    <div className="bg-primary/10 p-3 rounded-full">
+                      <Percent className="h-5 w-5 text-primary" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            {/* Recent Orders */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Orders</CardTitle>
+                <CardDescription>Your most recent 5 orders</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="text-center py-6">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-r-transparent mx-auto" />
+                    <p className="mt-2 text-sm text-muted-foreground">Loading orders...</p>
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div className="text-center py-6">
+                    <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">No orders yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {orders.slice(0, 5).map((order) => (
+                      <div key={order.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-md overflow-hidden bg-muted">
+                            {order.product?.images && order.product.images[0] ? (
+                              <img
+                                src={order.product.images[0]}
+                                alt={order.product.title}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground">
+                                <Package className="h-5 w-5" />
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-sm">{order.product?.title || 'Unknown Product'}</h4>
+                            <div className="flex items-center text-xs text-muted-foreground mt-1">
+                              <span>{new Date(order.created_at).toLocaleDateString()}</span>
+                              <span className="mx-1">•</span>
+                              <span>₦{Number(order.product?.price || 0).toLocaleString()}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex-1 p-6">
-                          <div className="flex justify-between">
-                            <h3 className="font-semibold text-lg">{product.title}</h3>
-                            <Badge className="bg-green-100 text-green-800">{product.status}</Badge>
+                        <Badge 
+                          variant="outline"
+                          className={
+                            order.status === 'completed' 
+                              ? 'bg-green-50 text-green-700 border-green-200' 
+                              : order.status === 'cancelled' 
+                              ? 'bg-red-50 text-red-700 border-red-200' 
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }
+                        >
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        </Badge>
+                      </div>
+                    ))}
+                    
+                    {orders.length > 5 && (
+                      <div className="text-center pt-2">
+                        <Button 
+                          variant="link" 
+                          onClick={() => setActiveTab('orders')}
+                          className="text-sm"
+                        >
+                          View all orders
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Low Stock Alert */}
+            {lowStockProducts.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center">
+                    <AlertTriangle className="h-5 w-5 text-amber-500 mr-2" />
+                    Low Stock Alert
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {lowStockProducts.map((product) => (
+                      <div key={product.id} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-md overflow-hidden bg-muted">
+                            {product.images && product.images[0] ? (
+                              <img
+                                src={product.images[0]}
+                                alt={product.title}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground">
+                                <Package className="h-5 w-5" />
+                              </div>
+                            )}
                           </div>
-                          <p className="text-primary font-medium mt-2">₦{product.price.toLocaleString()}</p>
-                          
-                          <div className="flex items-center space-x-6 mt-4 text-sm text-muted-foreground">
-                            <div className="flex items-center">
-                              <Clock size={14} className="mr-1" />
-                              <span>Added {product.dateAdded}</span>
-                            </div>
-                            <div>
-                              <span>{product.views} views</span>
-                            </div>
-                            <div>
-                              <span>{product.likes} likes</span>
+                          <div>
+                            <h4 className="font-medium text-sm">{product.title}</h4>
+                            <p className="text-xs text-amber-500">
+                              Only <strong>2</strong> left in stock
+                            </p>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleViewProduct(product.id)}
+                        >
+                          Update
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Sales Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Sales Overview</CardTitle>
+                <CardDescription>Your sales performance for the last 7 days</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={analytics.dailySales}
+                      margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                      <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                      <Tooltip />
+                      <Line yAxisId="left" type="monotone" dataKey="sales" stroke="#8884d8" name="Revenue (₦)" />
+                      <Line yAxisId="right" type="monotone" dataKey="orders" stroke="#82ca9d" name="Orders" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="orders" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Manage Orders</CardTitle>
+                <CardDescription>
+                  View and update the status of your orders
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="text-center py-6">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-r-transparent mx-auto" />
+                    <p className="mt-2 text-sm text-muted-foreground">Loading orders...</p>
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground mb-2">No orders yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Orders will appear here when customers purchase your products.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {orders.map((order) => (
+                      <div key={order.id} className="border rounded-lg p-4 hover:border-primary transition-colors">
+                        <div className="flex flex-col md:flex-row md:items-center gap-4">
+                          <div className="flex-shrink-0">
+                            <div className="h-16 w-16 rounded-md overflow-hidden bg-muted">
+                              {order.product?.images && order.product.images[0] ? (
+                                <img
+                                  src={order.product.images[0]}
+                                  alt={order.product.title}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground">
+                                  <Package className="h-8 w-8" />
+                                </div>
+                              )}
                             </div>
                           </div>
                           
-                          <div className="flex space-x-2 mt-6">
-                            <Button variant="outline" size="sm">
-                              <Edit size={14} className="mr-1" />
-                              Edit
+                          <div className="flex-grow">
+                            <h3 className="font-medium">{order.product?.title || 'Unknown Product'}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              ₦{Number(order.product?.price || 0).toLocaleString()}
+                            </p>
+                            <div className="flex items-center mt-1">
+                              <p className="text-xs text-muted-foreground">
+                                Order date: {new Date(order.created_at).toLocaleDateString()}
+                              </p>
+                              <span className="mx-2 text-muted-foreground">•</span>
+                              <p className="text-xs text-muted-foreground flex items-center">
+                                <span>Buyer: </span>
+                                <span className="flex items-center ml-1">
+                                  <Avatar className="h-4 w-4 mr-1">
+                                    <AvatarFallback>{order.buyer?.username?.[0] || '?'}</AvatarFallback>
+                                  </Avatar>
+                                  {order.buyer?.username || 'Unknown'}
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="md:text-right">
+                            <Badge 
+                              variant="outline"
+                              className={
+                                order.status === 'completed' 
+                                  ? 'bg-green-50 text-green-700 border-green-200' 
+                                  : order.status === 'cancelled' 
+                                  ? 'bg-red-50 text-red-700 border-red-200' 
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }
+                            >
+                              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                            </Badge>
+                            
+                            {order.status === 'pending' && (
+                              <div className="flex space-x-2 mt-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
+                                >
+                                  Complete
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            )}
+                            
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="mt-2"
+                              onClick={() => navigate(`/messages?sellerId=${order.buyer?.id}`)}
+                            >
+                              <MessageSquare className="h-4 w-4 mr-1" />
+                              Message Buyer
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="products" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>My Products</CardTitle>
+                  <CardDescription>
+                    Manage your product listings
+                  </CardDescription>
+                </div>
+                <Button onClick={handleAddProduct}>
+                  <Plus className="h-4 w-4 mr-2" /> New Product
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="text-center py-6">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-r-transparent mx-auto" />
+                    <p className="mt-2 text-sm text-muted-foreground">Loading products...</p>
+                  </div>
+                ) : products.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground mb-2">No products yet</p>
+                    <Button onClick={handleAddProduct} className="mt-2">
+                      Add Your First Product
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {products.map((product) => (
+                      <div key={product.id} className="border rounded-lg overflow-hidden hover:border-primary transition-colors">
+                        <div className="aspect-video bg-muted relative">
+                          {product.images && product.images[0] ? (
+                            <img
+                              src={product.images[0]}
+                              alt={product.title}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground">
+                              <Package className="h-8 w-8" />
+                            </div>
+                          )}
+                          {/* Simulated stock level - would be based on actual data */}
+                          {lowStockProducts.some(p => p.id === product.id) && (
+                            <div className="absolute top-2 right-2 bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
+                              Low Stock
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-4">
+                          <h3 className="font-medium truncate">{product.title}</h3>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            ₦{Number(product.price).toLocaleString()}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <Badge variant="secondary">
+                              {product.category}
+                            </Badge>
+                            <Badge variant="outline">
+                              {product.condition}
+                            </Badge>
+                          </div>
+                          <div className="flex space-x-2 mt-3">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => handleViewProduct(product.id)}
+                            >
+                              View
                             </Button>
                             <Button 
                               variant="outline" 
-                              size="sm" 
-                              className="text-red-500 border-red-200 hover:bg-red-50"
-                              onClick={() => handleDeleteProduct(product.id)}
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => navigate(`/edit-product/${product.id}`)}
                             >
-                              <Trash2 size={14} className="mr-1" />
-                              Delete
+                              Edit
                             </Button>
                           </div>
                         </div>
                       </div>
-                    </Card>
-                  ))}
-                </div>
-              </>
-            )}
-            
-            {activeTab === "orders" && (
-              <>
-                <h1 className="text-2xl font-semibold mb-6">Orders</h1>
-                
-                <div className="space-y-4">
-                  {orders.map((order) => (
-                    <Card key={order.id} className="overflow-hidden">
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <CardTitle className="text-base">{order.id}</CardTitle>
-                            <CardDescription>Ordered on {order.date}</CardDescription>
-                          </div>
-                          <Badge className={
-                            order.status === "Completed" ? "bg-green-100 text-green-800" : 
-                            "bg-blue-100 text-blue-800"
-                          }>
-                            {order.status}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Product:</span>
-                            <span>{order.product}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Buyer:</span>
-                            <span>{order.buyer}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Amount:</span>
-                            <span className="font-medium">₦{order.amount.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="bg-secondary/50 flex justify-end">
-                        <Button size="sm" variant="outline">View Details</Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              </>
-            )}
-            
-            {activeTab === "earnings" && (
-              <>
-                <h1 className="text-2xl font-semibold mb-6">Earnings</h1>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                  <Card className="p-6">
-                    <div className="flex items-center space-x-2">
-                      <div className="p-2 bg-green-100 rounded-full">
-                        <DollarSign className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div className="text-sm text-muted-foreground">Total Earnings</div>
-                    </div>
-                    <div className="mt-3 text-2xl font-semibold">₦465,000</div>
-                  </Card>
-                  
-                  <Card className="p-6">
-                    <div className="flex items-center space-x-2">
-                      <div className="p-2 bg-blue-100 rounded-full">
-                        <Package className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div className="text-sm text-muted-foreground">Total Sales</div>
-                    </div>
-                    <div className="mt-3 text-2xl font-semibold">2</div>
-                  </Card>
-                  
-                  <Card className="p-6">
-                    <div className="flex items-center space-x-2">
-                      <div className="p-2 bg-purple-100 rounded-full">
-                        <User className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div className="text-sm text-muted-foreground">Active Listings</div>
-                    </div>
-                    <div className="mt-3 text-2xl font-semibold">2</div>
-                  </Card>
-                </div>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Earnings History</CardTitle>
-                    <CardDescription>View your recent transactions</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center py-3 border-b border-border">
-                        <div>
-                          <div className="font-medium">MacBook Pro 2022</div>
-                          <div className="text-sm text-muted-foreground">Oct 15, 2023</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium text-green-600">+₦450,000</div>
-                          <div className="text-xs text-muted-foreground">From Sarah Adams</div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-between items-center py-3 border-b border-border">
-                        <div>
-                          <div className="font-medium">Graphic Design Services</div>
-                          <div className="text-sm text-muted-foreground">Oct 8, 2023</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium text-green-600">+₦15,000</div>
-                          <div className="text-xs text-muted-foreground">From Emmanuel Tech</div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-            
-            {activeTab === "settings" && (
-              <>
-                <h1 className="text-2xl font-semibold mb-6">Seller Settings</h1>
-                
-                <Card className="mb-6">
-                  <CardHeader>
-                    <CardTitle>Seller Profile</CardTitle>
-                    <CardDescription>Manage your seller information</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="shop-name">Display Name / Shop Name</Label>
-                        <Input id="shop-name" defaultValue="David's Tech Hub" />
-                        <p className="text-xs text-muted-foreground">This is how your name will appear to buyers</p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="bio">Bio / Description</Label>
-                        <textarea 
-                          id="bio" 
-                          rows={4}
-                          className="w-full border border-input rounded-md p-3 text-sm"
-                          defaultValue="CS student selling quality tech products and offering design services at affordable prices for students."
-                        ></textarea>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="contact-number">Contact Number</Label>
-                        <Input id="contact-number" defaultValue="080XXXXXXXX" />
-                      </div>
-                      
-                      <Button>Save Profile</Button>
-                    </form>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Payment Settings</CardTitle>
-                    <CardDescription>Manage your preferred payment methods</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="account-name">Account Name</Label>
-                        <Input id="account-name" defaultValue="David Miller" />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="bank-name">Bank Name</Label>
-                        <select 
-                          id="bank-name" 
-                          className="w-full border border-input rounded-md p-2 h-10"
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sales by Category</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={analytics.categorySales}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          paddingAngle={5}
+                          dataKey="value"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                         >
-                          <option>Access Bank</option>
-                          <option>Guaranty Trust Bank</option>
-                          <option selected>First Bank</option>
-                          <option>Zenith Bank</option>
-                          <option>United Bank for Africa</option>
-                        </select>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="account-number">Account Number</Label>
-                        <Input id="account-number" defaultValue="012345678X" />
-                      </div>
-                      
-                      <Button>Save Payment Details</Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-          </div>
-        </div>
+                          {analytics.categorySales.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value) => [`₦${Number(value).toLocaleString()}`, 'Revenue']}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Order Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={analytics.orderStatus}
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#8884d8" name="Orders">
+                          {analytics.orderStatus.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Daily Sales & Orders</CardTitle>
+                <CardDescription>
+                  Your sales performance for the last 7 days
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={analytics.dailySales}
+                      margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                      <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                      <Tooltip formatter={(value, name) => {
+                        if (name === 'sales') return [`₦${Number(value).toLocaleString()}`, 'Revenue'];
+                        return [value, 'Orders'];
+                      }} />
+                      <Line yAxisId="left" type="monotone" dataKey="sales" stroke="#8884d8" name="Revenue" />
+                      <Line yAxisId="right" type="monotone" dataKey="orders" stroke="#82ca9d" name="Orders" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="promotions" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Create Promotion</CardTitle>
+                <CardDescription>
+                  Offer discounts and special deals on your products
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Percent className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <h3 className="text-lg font-medium mb-2">Promotions Coming Soon</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto mb-4">
+                    We're working on adding promotions and discount capabilities to help you boost your sales. Stay tuned!
+                  </p>
+                  <Button variant="outline">Get Notified When Available</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );

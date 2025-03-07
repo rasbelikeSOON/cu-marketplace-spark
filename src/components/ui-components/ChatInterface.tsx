@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { chatService } from '@/services/chatService';
 import { useToast } from '@/hooks/use-toast';
-import { Send, ArrowLeft } from 'lucide-react';
+import { Send, ArrowLeft, MessageCircle, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface ChatInterfaceProps {
   receiverId: string;
   receiverName: string;
+  receiverProfile?: any; // Add this to access seller's telegram and phone
   productId?: string;
   productTitle?: string;
   onBack?: () => void;
@@ -21,6 +22,7 @@ interface ChatInterfaceProps {
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
   receiverId, 
   receiverName, 
+  receiverProfile,
   productId, 
   productTitle,
   onBack 
@@ -108,27 +110,78 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
+  const handleTelegramChat = () => {
+    if (receiverProfile?.telegram_username) {
+      window.open(`https://t.me/${receiverProfile.telegram_username.replace('@', '')}`, '_blank');
+    } else {
+      toast({
+        title: 'Info',
+        description: 'This seller has not provided a Telegram username.',
+      });
+    }
+  };
+
+  const handlePhoneCall = () => {
+    if (receiverProfile?.phone_number) {
+      window.open(`tel:${receiverProfile.phone_number}`, '_blank');
+    } else {
+      toast({
+        title: 'Info',
+        description: 'This seller has not provided a phone number.',
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col h-[600px] border rounded-lg overflow-hidden">
-      <div className="bg-background border-b p-3 flex items-center">
-        {onBack && (
-          <Button variant="ghost" size="icon" onClick={onBack} className="mr-2">
-            <ArrowLeft size={18} />
-          </Button>
-        )}
+      <div className="bg-background border-b p-3 flex items-center justify-between">
         <div className="flex items-center">
-          <Avatar className="h-8 w-8 mr-2">
-            <AvatarFallback>{receiverName?.[0] || '?'}</AvatarFallback>
-          </Avatar>
-          <div>
-            <h3 className="font-medium">{receiverName}</h3>
-            {productTitle && (
-              <p className="text-xs text-muted-foreground">
-                Regarding: {productTitle}
-              </p>
-            )}
+          {onBack && (
+            <Button variant="ghost" size="icon" onClick={onBack} className="mr-2">
+              <ArrowLeft size={18} />
+            </Button>
+          )}
+          <div className="flex items-center">
+            <Avatar className="h-8 w-8 mr-2">
+              <AvatarFallback>{receiverName?.[0] || '?'}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h3 className="font-medium">{receiverName}</h3>
+              {productTitle && (
+                <p className="text-xs text-muted-foreground">
+                  Regarding: {productTitle}
+                </p>
+              )}
+            </div>
           </div>
         </div>
+        
+        {receiverProfile && (
+          <div className="flex space-x-2">
+            {receiverProfile.telegram_username && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleTelegramChat}
+                className="flex items-center gap-1"
+              >
+                <MessageCircle size={16} />
+                <span className="hidden sm:inline">Telegram</span>
+              </Button>
+            )}
+            {receiverProfile.phone_number && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handlePhoneCall}
+                className="flex items-center gap-1"
+              >
+                <Phone size={16} />
+                <span className="hidden sm:inline">Call</span>
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 bg-muted/30">

@@ -105,6 +105,33 @@ serve(async (req) => {
         message += `\nCheck it out in the CU Marketplace app!`;
         break;
       
+      case "new_message":
+        message = `💬 <b>New Message</b>\n\n`;
+        message += `From: <b>${data.senderName || 'Someone'}</b>\n`;
+        message += `Message: ${data.message}\n`;
+        if (data.productId) {
+          message += `Regarding your product\n`;
+        }
+        message += `\nReply in the CU Marketplace app to continue the conversation.`;
+        break;
+      
+      case "new_order":
+        message = `🎉 <b>New Order Received!</b>\n\n`;
+        message += `Product: <b>${data.product.title}</b>\n`;
+        message += `Price: $${data.product.price.toFixed(2)}\n`;
+        message += `Buyer: ${data.buyer.username || 'Anonymous'}\n`;
+        message += `\nCheck your seller dashboard for more details.`;
+        break;
+      
+      case "order_status":
+        message = `📦 <b>Order Status Update</b>\n\n`;
+        message += `Your order for <b>${data.product.title}</b> has been ${data.status}.\n`;
+        if (data.status === 'shipped') {
+          message += `Expected delivery: ${data.deliveryDate || 'Soon'}\n`;
+        }
+        message += `\nCheck the CU Marketplace app for more details.`;
+        break;
+      
       default:
         message = `📢 <b>Notification from CU Marketplace</b>\n\n${JSON.stringify(data)}`;
     }

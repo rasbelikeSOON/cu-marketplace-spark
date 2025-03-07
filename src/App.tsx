@@ -16,6 +16,8 @@ import NotFound from "./pages/NotFound";
 import AddProduct from "./pages/AddProduct";
 import ShoppingCart from "./pages/ShoppingCart";
 import Profile from "./pages/Profile";
+import SellerDashboard from "./pages/SellerDashboard";
+import Messages from "./pages/Messages";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +41,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/seller-dashboard" 
+              element={
+                <ProtectedRoute>
+                  <SellerDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/messages" 
+              element={
+                <ProtectedRoute>
+                  <Messages />
                 </ProtectedRoute>
               } 
             />
