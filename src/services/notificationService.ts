@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 interface NotificationPreferences {
@@ -10,6 +9,42 @@ interface NotificationPreferences {
 }
 
 export const notificationService = {
+  /**
+   * Initialize OneSignal
+   */
+  init: async () => {
+    if (typeof window === 'undefined' || !window.OneSignal) {
+      console.error('OneSignal not loaded');
+      return;
+    }
+
+    try {
+      // OneSignal is already initialized in index.html
+      console.log('OneSignal initialized');
+    } catch (error) {
+      console.error('Error initializing OneSignal:', error);
+    }
+  },
+
+  /**
+   * Set user ID for OneSignal
+   */
+  setUserId: async (userId: string) => {
+    if (typeof window === 'undefined' || !window.OneSignal) {
+      console.error('OneSignal not loaded');
+      return;
+    }
+
+    try {
+      // This actually calls login which we already have in initializeUser
+      // But we'll keep this method for backward compatibility
+      await window.OneSignal.login(userId);
+      console.log('OneSignal user ID set successfully');
+    } catch (error) {
+      console.error('Error setting OneSignal user ID:', error);
+    }
+  },
+
   /**
    * Request permission for push notifications
    */
