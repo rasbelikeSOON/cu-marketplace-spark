@@ -20,6 +20,7 @@ import ShoppingCart from "./pages/ShoppingCart";
 import Profile from "./pages/Profile";
 import SellerDashboard from "./pages/SellerDashboard";
 import Messages from "./pages/Messages";
+import NotificationSettings from "./pages/NotificationSettings";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Profile />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/notification-settings" 
+                element={
+                  <ProtectedRoute>
+                    <NotificationSettings />
                   </ProtectedRoute>
                 } 
               />
