@@ -13,6 +13,19 @@
     
     <!-- OneSignal Web Push Notifications -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(function(OneSignal) {
+        OneSignal.init({
+          appId: "YOUR_ONESIGNAL_APP_ID", // Replace with your OneSignal App ID
+          safari_web_id: "YOUR_SAFARI_WEB_ID", // Optional: Your Safari Web ID
+          allowLocalhostAsSecureOrigin: true, // For local development
+          notifyButton: {
+            enable: true,
+          },
+        });
+      });
+    </script>
     
     <!-- GPT Engineer script for the "Select" feature -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>

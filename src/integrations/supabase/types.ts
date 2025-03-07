@@ -274,6 +274,42 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          created_at: string | null
+          email_marketing: boolean
+          email_order_updates: boolean
+          id: string
+          push_chat_messages: boolean
+          push_marketing: boolean
+          push_order_updates: boolean
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email_marketing?: boolean
+          email_order_updates?: boolean
+          id?: string
+          push_chat_messages?: boolean
+          push_marketing?: boolean
+          push_order_updates?: boolean
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email_marketing?: boolean
+          email_order_updates?: boolean
+          id?: string
+          push_chat_messages?: boolean
+          push_marketing?: boolean
+          push_order_updates?: boolean
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           buyer_id: string

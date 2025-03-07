@@ -1,21 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { notificationService } from '@/services/notificationService';
+import { notificationService, NotificationPreferences } from '@/services/notificationService';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { BellRing, Mail, MessageSquare, ShoppingBag } from 'lucide-react';
-
-interface NotificationPreferences {
-  email_order_updates: boolean;
-  email_marketing: boolean;
-  push_order_updates: boolean;
-  push_chat_messages: boolean;
-  push_marketing: boolean;
-}
 
 const NotificationSettings: React.FC = () => {
   const { user } = useAuth();
@@ -37,18 +28,12 @@ const NotificationSettings: React.FC = () => {
   }, [user]);
 
   const loadPreferences = async () => {
+    if (!user) return;
+    
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('notification_preferences')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
+      const data = await notificationService.getUserPreferences(user.id);
+      
       if (data) {
         setPreferences(data);
       }
@@ -69,22 +54,9 @@ const NotificationSettings: React.FC = () => {
     
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('notification_preferences')
-        .upsert({
-          user_id: user.id,
-          ...preferences,
-          updated_at: new Date().toISOString(),
-        });
-
-      if (error) throw error;
-
-      // Update OneSignal tags
-      notificationService.setUserTags({
-        order_updates: preferences.push_order_updates ? 'true' : 'false',
-        chat_messages: preferences.push_chat_messages ? 'true' : 'false',
-        marketing: preferences.push_marketing ? 'true' : 'false',
-      });
+      const success = await notificationService.saveUserPreferences(user.id, preferences);
+      
+      if (!success) throw new Error('Failed to save preferences');
 
       toast({
         title: 'Success',
