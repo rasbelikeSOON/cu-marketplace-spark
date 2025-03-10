@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
@@ -8,11 +7,32 @@ import { ShoppingCart, Heart, HeartOff, ArrowLeft, MessageCircle, Phone } from "
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import { categories } from "@/data/mockData";
 import SocialShare from "@/components/ui-components/SocialShare";
 import { productService } from "@/services/productService";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { useQuery } from "@tanstack/react-query";
+
+interface ProductWithSeller {
+  id: string;
+  title: string;
+  price: number;
+  description: string | null;
+  images: string[];
+  category: string;
+  condition: string;
+  created_at: string;
+  updated_at: string;
+  seller_id: string;
+  seller: {
+    id: string;
+    username: string | null;
+    avatar_url: string | null;
+    matric_number?: string | null;
+    telegram_username?: string | null;
+    phone_number?: string | null;
+  };
+  discount?: number;
+}
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -23,24 +43,21 @@ const ProductDetail = () => {
   
   const [selectedImage, setSelectedImage] = useState<string>("");
   
-  // Fetch product data using React Query
   const { data: product, isLoading, error } = useQuery({
     queryKey: ['product', id],
     queryFn: () => id ? productService.getProductById(id) : null,
     enabled: !!id,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
-  
-  // Fetch wishlist data when component mounts
+
   useEffect(() => {
     if (user) {
       fetchWishlist();
     }
   }, [fetchWishlist, user]);
-  
-  // Set selected image when product data loads
+
   useEffect(() => {
-    if (product?.images && product.images.length > 0) {
+    if (product && product.images && Array.isArray(product.images) && product.images.length > 0) {
       setSelectedImage(product.images[0]);
     }
   }, [product]);
@@ -56,7 +73,6 @@ const ProductDetail = () => {
       return;
     }
     
-    // In a real app, this would be an API call to add the product to the cart
     toast({
       title: "Added to cart",
       description: `${product?.title} has been added to your cart.`,
@@ -74,10 +90,7 @@ const ProductDetail = () => {
       return;
     }
     
-    // First add to cart
     handleAddToCart();
-    
-    // Then navigate to cart
     navigate("/cart");
   };
 
@@ -193,22 +206,22 @@ const ProductDetail = () => {
     );
   }
 
+  const typedProduct = product as unknown as ProductWithSeller;
+  const productImages = Array.isArray(typedProduct.images) ? typedProduct.images : [];
+
   const shareUrl = window.location.href;
   const isFavorited = id ? isInWishlist(id) : false;
 
-  // Find similar products (in a real app, this would be an API call)
-  // For now, we're just creating dummy related products
   const relatedProducts = [
-    { ...product, id: product.id + "-related-1" },
-    { ...product, id: product.id + "-related-2" },
-    { ...product, id: product.id + "-related-3" },
-    { ...product, id: product.id + "-related-4" }
+    { ...typedProduct, id: typedProduct.id + "-related-1" },
+    { ...typedProduct, id: typedProduct.id + "-related-2" },
+    { ...typedProduct, id: typedProduct.id + "-related-3" },
+    { ...typedProduct, id: typedProduct.id + "-related-4" }
   ];
 
   return (
     <MainLayout>
       <div className="container-custom py-8 md:py-12">
-        {/* Breadcrumb */}
         <button
           onClick={() => navigate(-1)}
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8"
@@ -218,20 +231,18 @@ const ProductDetail = () => {
         </button>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-          {/* Product Images */}
           <div className="space-y-4">
             <div className="aspect-square overflow-hidden rounded-lg border border-border dark:border-gray-700 bg-white dark:bg-gray-800">
               <img
-                src={selectedImage || (product.images && product.images.length > 0 ? product.images[0] : "/placeholder.svg")}
-                alt={product.title}
+                src={selectedImage || (productImages.length > 0 ? productImages[0] : "/placeholder.svg")}
+                alt={typedProduct.title}
                 className="h-full w-full object-contain"
               />
             </div>
             
-            {/* Thumbnail Images */}
-            {product.images && product.images.length > 1 && (
+            {productImages.length > 1 && (
               <div className="flex space-x-2 overflow-x-auto pb-2">
-                {product.images.map((image: string, index: number) => (
+                {productImages.map((image: string, index: number) => (
                   <button
                     key={index}
                     className={`relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border ${
@@ -243,7 +254,7 @@ const ProductDetail = () => {
                   >
                     <img
                       src={image}
-                      alt={`${product.title} thumbnail ${index + 1}`}
+                      alt={`${typedProduct.title} thumbnail ${index + 1}`}
                       className="h-full w-full object-cover"
                     />
                   </button>
@@ -252,42 +263,38 @@ const ProductDetail = () => {
             )}
           </div>
           
-          {/* Product Details */}
           <div className="space-y-6">
             <div>
-              <h1 className="text-2xl md:text-3xl font-display font-semibold">{product.title}</h1>
+              <h1 className="text-2xl md:text-3xl font-display font-semibold">{typedProduct.title}</h1>
               <div className="flex items-center mt-2 space-x-2">
                 <p className="text-xl font-semibold text-primary dark:text-covenant-lavender">
-                  ₦{product.price?.toLocaleString()}
+                  ₦{typedProduct.price?.toLocaleString()}
                 </p>
                 
-                {product.discount > 0 && (
+                {typedProduct.discount && typedProduct.discount > 0 && (
                   <>
                     <p className="text-sm text-muted-foreground line-through">
-                      ₦{((product.price / (1 - product.discount / 100))).toLocaleString()}
+                      ₦{((typedProduct.price / (1 - typedProduct.discount / 100))).toLocaleString()}
                     </p>
                     <Badge variant="outline" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200 dark:border-green-800">
-                      {product.discount}% OFF
+                      {typedProduct.discount}% OFF
                     </Badge>
                   </>
                 )}
               </div>
             </div>
             
-            {/* Categories */}
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary">
-                {product.category}
+                {typedProduct.category}
               </Badge>
             </div>
             
-            {/* Description */}
             <div>
               <h2 className="text-lg font-semibold mb-2">Description</h2>
-              <p className="text-muted-foreground">{product.description}</p>
+              <p className="text-muted-foreground">{typedProduct.description}</p>
             </div>
             
-            {/* Actions */}
             <div className="flex flex-wrap gap-3 pt-2">
               <Button
                 onClick={handleBuyNow}
@@ -321,16 +328,15 @@ const ProductDetail = () => {
             
             <Separator />
             
-            {/* Seller Information */}
             <div>
               <h2 className="text-lg font-semibold mb-3">Seller Information</h2>
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-muted-foreground">
-                  {product.seller?.username?.[0]?.toUpperCase() || "S"}
+                  {typedProduct.seller?.username?.[0]?.toUpperCase() || "S"}
                 </div>
                 <div>
-                  <p className="font-medium">{product.seller?.username || "Seller"}</p>
-                  <p className="text-sm text-muted-foreground">{product.seller?.matric_number || "Verified Seller"}</p>
+                  <p className="font-medium">{typedProduct.seller?.username || "Seller"}</p>
+                  <p className="text-sm text-muted-foreground">{typedProduct.seller?.matric_number || "Verified Seller"}</p>
                 </div>
               </div>
               
@@ -340,13 +346,13 @@ const ProductDetail = () => {
                   Message Seller
                 </Button>
                 
-                {product.seller?.telegram_username && (
+                {typedProduct.seller?.telegram_username && (
                   <Button variant="outline" size="sm" onClick={handleContactTelegram}>
                     Contact on Telegram
                   </Button>
                 )}
                 
-                {product.seller?.phone_number && (
+                {typedProduct.seller?.phone_number && (
                   <Button variant="outline" size="sm" onClick={handleContactPhone}>
                     <Phone size={16} className="mr-2" />
                     Call Seller
@@ -355,18 +361,16 @@ const ProductDetail = () => {
               </div>
             </div>
             
-            {/* Social Sharing */}
             <div className="pt-2">
               <SocialShare 
-                title={product.title} 
-                description={product.description || ""} 
+                title={typedProduct.title} 
+                description={typedProduct.description || ""} 
                 url={shareUrl} 
               />
             </div>
           </div>
         </div>
         
-        {/* Related Products */}
         <div className="mt-16">
           <h2 className="text-xl font-display font-semibold mb-6">You may also like</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -375,14 +379,14 @@ const ProductDetail = () => {
                 key={`${relatedProduct.id}-${index}`}
                 className="cursor-pointer group"
                 onClick={() => {
-                  if (relatedProduct.id !== product.id) {
+                  if (relatedProduct.id !== typedProduct.id) {
                     navigate(`/product/${relatedProduct.id.split('-')[0]}`);
                   }
                 }}
               >
                 <div className="aspect-square rounded-lg overflow-hidden bg-secondary mb-2">
                   <img 
-                    src={relatedProduct.images?.[0] || "/placeholder.svg"} 
+                    src={Array.isArray(relatedProduct.images) && relatedProduct.images.length > 0 ? relatedProduct.images[0] : "/placeholder.svg"} 
                     alt={relatedProduct.title}
                     className="h-full w-full object-cover transition-transform group-hover:scale-105"
                   />

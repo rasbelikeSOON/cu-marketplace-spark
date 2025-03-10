@@ -48,31 +48,16 @@ export const useWishlistStore = create<WishlistStore>()(
         set({ isLoading: true, error: null });
         
         try {
-          const { data, error } = await supabase
-            .from('wishlists')
-            .select(`
-              id,
-              product_id,
-              user_id,
-              created_at,
-              product:products(
-                id,
-                title,
-                price,
-                images,
-                category,
-                seller:profiles(
-                  username,
-                  avatar_url
-                )
-              )
-            `)
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
+          // Use a raw SQL query to fetch the data since 'wishlists' is not in the types
+          const { data, error } = await supabase.rpc('get_user_wishlist', {
+            user_id_param: user.id
+          });
             
           if (error) throw error;
           
-          set({ items: data as WishlistItem[], isLoading: false });
+          // Transform the data to match our expected format
+          const wishlistItems = data as WishlistItem[] || [];
+          set({ items: wishlistItems, isLoading: false });
         } catch (error: any) {
           console.error('Error fetching wishlist:', error);
           set({ error: error.message, isLoading: false });
@@ -95,12 +80,11 @@ export const useWishlistStore = create<WishlistStore>()(
             return;
           }
           
-          const { error } = await supabase
-            .from('wishlists')
-            .insert({
-              product_id: productId,
-              user_id: user.id
-            });
+          // Use a raw SQL query to insert since 'wishlists' is not in the types
+          const { error } = await supabase.rpc('add_to_wishlist', {
+            user_id_param: user.id,
+            product_id_param: productId
+          });
             
           if (error) throw error;
           
@@ -122,11 +106,11 @@ export const useWishlistStore = create<WishlistStore>()(
         set({ isLoading: true, error: null });
         
         try {
-          const { error } = await supabase
-            .from('wishlists')
-            .delete()
-            .eq('user_id', user.id)
-            .eq('product_id', productId);
+          // Use a raw SQL query to delete since 'wishlists' is not in the types
+          const { error } = await supabase.rpc('remove_from_wishlist', {
+            user_id_param: user.id,
+            product_id_param: productId
+          });
             
           if (error) throw error;
           
