@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { ShoppingCart, LogOut, User, Settings, MessageCircle, Package } from 'lucide-react';
+import { ShoppingCart, LogOut, User, Settings, MessageCircle, Package, Heart } from 'lucide-react';
 import NotificationCenter from './NotificationCenter';
 
 const Header: React.FC = () => {
@@ -41,6 +41,12 @@ const Header: React.FC = () => {
         <div className="flex items-center gap-4">
           {user ? (
             <>
+              <Link to="/wishlist">
+                <Button variant="ghost" size="icon">
+                  <Heart className="h-5 w-5" />
+                </Button>
+              </Link>
+              
               <Link to="/cart">
                 <Button variant="ghost" size="icon">
                   <ShoppingCart className="h-5 w-5" />
@@ -90,6 +96,12 @@ const Header: React.FC = () => {
                     <Link to="/messages" className="cursor-pointer w-full flex items-center">
                       <MessageCircle className="mr-2 h-4 w-4" />
                       <span>Messages</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/wishlist" className="cursor-pointer w-full flex items-center">
+                      <Heart className="mr-2 h-4 w-4" />
+                      <span>Wishlist</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>

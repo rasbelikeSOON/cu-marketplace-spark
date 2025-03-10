@@ -8,34 +8,42 @@ import { ShoppingCart, Heart, HeartOff, ArrowLeft, MessageCircle, Phone } from "
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockProducts } from "@/data/mockData";
+import { categories } from "@/data/mockData";
 import SocialShare from "@/components/ui-components/SocialShare";
+import { productService } from "@/services/productService";
+import { useWishlistStore } from "@/store/useWishlistStore";
+import { useQuery } from "@tanstack/react-query";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { addToWishlist, removeFromWishlist, isInWishlist, fetchWishlist } = useWishlistStore();
   
-  const [product, setProduct] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string>("");
-  const [isFavorited, setIsFavorited] = useState(false);
-
+  
+  // Fetch product data using React Query
+  const { data: product, isLoading, error } = useQuery({
+    queryKey: ['product', id],
+    queryFn: () => id ? productService.getProductById(id) : null,
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+  
+  // Fetch wishlist data when component mounts
   useEffect(() => {
-    // In a real app, this would be an API call to get the product data
-    const selectedProduct = mockProducts.find(p => p.id === parseInt(id || "0"));
-    
-    if (selectedProduct) {
-      setProduct(selectedProduct);
-      setSelectedImage(selectedProduct.images[0]);
-      // Check if product is in user's favorites
-      // This would come from an API call in a real app
-      setIsFavorited(false);
+    if (user) {
+      fetchWishlist();
     }
-    
-    setLoading(false);
-  }, [id]);
+  }, [fetchWishlist, user]);
+  
+  // Set selected image when product data loads
+  useEffect(() => {
+    if (product?.images && product.images.length > 0) {
+      setSelectedImage(product.images[0]);
+    }
+  }, [product]);
 
   const handleAddToCart = () => {
     if (!user) {
@@ -51,7 +59,7 @@ const ProductDetail = () => {
     // In a real app, this would be an API call to add the product to the cart
     toast({
       title: "Added to cart",
-      description: `${product.name} has been added to your cart.`,
+      description: `${product?.title} has been added to your cart.`,
     });
   };
 
@@ -73,7 +81,7 @@ const ProductDetail = () => {
     navigate("/cart");
   };
 
-  const toggleFavorite = () => {
+  const toggleFavorite = async () => {
     if (!user) {
       toast({
         title: "Please sign in",
@@ -84,15 +92,30 @@ const ProductDetail = () => {
       return;
     }
     
-    setIsFavorited(!isFavorited);
+    if (!id) return;
     
-    // In a real app, this would be an API call to toggle favorite status
-    toast({
-      title: isFavorited ? "Removed from favorites" : "Added to favorites",
-      description: isFavorited 
-        ? `${product.name} has been removed from your favorites.`
-        : `${product.name} has been added to your favorites.`,
-    });
+    try {
+      if (isInWishlist(id)) {
+        await removeFromWishlist(id);
+        toast({
+          title: "Removed from wishlist",
+          description: `${product?.title} has been removed from your wishlist.`,
+        });
+      } else {
+        await addToWishlist(id);
+        toast({
+          title: "Added to wishlist",
+          description: `${product?.title} has been added to your wishlist.`,
+        });
+      }
+    } catch (error) {
+      console.error("Error toggling wishlist:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update wishlist. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleContactSeller = () => {
@@ -106,7 +129,9 @@ const ProductDetail = () => {
       return;
     }
     
-    navigate("/messages", { state: { sellerId: product.sellerId } });
+    if (product?.seller_id) {
+      navigate("/messages", { state: { sellerId: product.seller_id } });
+    }
   };
 
   const handleContactTelegram = () => {
@@ -133,7 +158,7 @@ const ProductDetail = () => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <MainLayout>
         <div className="container-custom py-12">
@@ -154,7 +179,7 @@ const ProductDetail = () => {
     );
   }
 
-  if (!product) {
+  if (error || !product) {
     return (
       <MainLayout>
         <div className="container-custom py-20 text-center">
@@ -169,6 +194,16 @@ const ProductDetail = () => {
   }
 
   const shareUrl = window.location.href;
+  const isFavorited = id ? isInWishlist(id) : false;
+
+  // Find similar products (in a real app, this would be an API call)
+  // For now, we're just creating dummy related products
+  const relatedProducts = [
+    { ...product, id: product.id + "-related-1" },
+    { ...product, id: product.id + "-related-2" },
+    { ...product, id: product.id + "-related-3" },
+    { ...product, id: product.id + "-related-4" }
+  ];
 
   return (
     <MainLayout>
@@ -187,14 +222,14 @@ const ProductDetail = () => {
           <div className="space-y-4">
             <div className="aspect-square overflow-hidden rounded-lg border border-border dark:border-gray-700 bg-white dark:bg-gray-800">
               <img
-                src={selectedImage || product.images[0]}
-                alt={product.name}
+                src={selectedImage || (product.images && product.images.length > 0 ? product.images[0] : "/placeholder.svg")}
+                alt={product.title}
                 className="h-full w-full object-contain"
               />
             </div>
             
             {/* Thumbnail Images */}
-            {product.images.length > 1 && (
+            {product.images && product.images.length > 1 && (
               <div className="flex space-x-2 overflow-x-auto pb-2">
                 {product.images.map((image: string, index: number) => (
                   <button
@@ -208,7 +243,7 @@ const ProductDetail = () => {
                   >
                     <img
                       src={image}
-                      alt={`${product.name} thumbnail ${index + 1}`}
+                      alt={`${product.title} thumbnail ${index + 1}`}
                       className="h-full w-full object-cover"
                     />
                   </button>
@@ -220,9 +255,11 @@ const ProductDetail = () => {
           {/* Product Details */}
           <div className="space-y-6">
             <div>
-              <h1 className="text-2xl md:text-3xl font-display font-semibold">{product.name}</h1>
+              <h1 className="text-2xl md:text-3xl font-display font-semibold">{product.title}</h1>
               <div className="flex items-center mt-2 space-x-2">
-                <p className="text-xl font-semibold text-primary dark:text-covenant-lavender">₦{product.price.toLocaleString()}</p>
+                <p className="text-xl font-semibold text-primary dark:text-covenant-lavender">
+                  ₦{product.price?.toLocaleString()}
+                </p>
                 
                 {product.discount > 0 && (
                   <>
@@ -239,11 +276,9 @@ const ProductDetail = () => {
             
             {/* Categories */}
             <div className="flex flex-wrap gap-2">
-              {product.categories.map((category: string, index: number) => (
-                <Badge key={index} variant="secondary">
-                  {category}
-                </Badge>
-              ))}
+              <Badge variant="secondary">
+                {product.category}
+              </Badge>
             </div>
             
             {/* Description */}
@@ -277,8 +312,8 @@ const ProductDetail = () => {
                 onClick={toggleFavorite}
                 size="icon"
                 variant="outline"
-                className="rounded-full"
-                aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
+                className={`rounded-full ${isFavorited ? 'bg-red-50 hover:bg-red-100 text-red-500' : ''}`}
+                aria-label={isFavorited ? "Remove from wishlist" : "Add to wishlist"}
               >
                 {isFavorited ? <HeartOff size={18} /> : <Heart size={18} />}
               </Button>
@@ -323,37 +358,37 @@ const ProductDetail = () => {
             {/* Social Sharing */}
             <div className="pt-2">
               <SocialShare 
-                title={product.name} 
-                description={product.description} 
+                title={product.title} 
+                description={product.description || ""} 
                 url={shareUrl} 
               />
             </div>
           </div>
         </div>
         
-        {/* Related Products - Would be implemented with actual data in a real app */}
+        {/* Related Products */}
         <div className="mt-16">
           <h2 className="text-xl font-display font-semibold mb-6">You may also like</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {mockProducts.slice(0, 4).map((relatedProduct) => (
+            {relatedProducts.map((relatedProduct, index) => (
               <div 
-                key={relatedProduct.id} 
+                key={`${relatedProduct.id}-${index}`}
                 className="cursor-pointer group"
                 onClick={() => {
                   if (relatedProduct.id !== product.id) {
-                    navigate(`/product/${relatedProduct.id}`);
+                    navigate(`/product/${relatedProduct.id.split('-')[0]}`);
                   }
                 }}
               >
                 <div className="aspect-square rounded-lg overflow-hidden bg-secondary mb-2">
                   <img 
-                    src={relatedProduct.images[0]} 
-                    alt={relatedProduct.name}
+                    src={relatedProduct.images?.[0] || "/placeholder.svg"} 
+                    alt={relatedProduct.title}
                     className="h-full w-full object-cover transition-transform group-hover:scale-105"
                   />
                 </div>
-                <h3 className="font-medium text-sm line-clamp-1">{relatedProduct.name}</h3>
-                <p className="text-sm text-primary dark:text-covenant-lavender">₦{relatedProduct.price.toLocaleString()}</p>
+                <h3 className="font-medium text-sm line-clamp-1">{relatedProduct.title}</h3>
+                <p className="text-sm text-primary dark:text-covenant-lavender">₦{relatedProduct.price?.toLocaleString()}</p>
               </div>
             ))}
           </div>
