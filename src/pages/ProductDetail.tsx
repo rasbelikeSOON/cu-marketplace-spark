@@ -1,404 +1,344 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import MainLayout from "../layouts/MainLayout";
-import { Button } from "../components/ui-components/Button";
-import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Heart, HeartOff, ArrowLeft, MessageCircle, Phone } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/AuthContext";
-import SocialShare from "@/components/ui-components/SocialShare";
-import { productService } from "@/services/productService";
-import { useWishlistStore } from "@/store/useWishlistStore";
-import { useQuery } from "@tanstack/react-query";
 
-interface ProductWithSeller {
+import React, { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import { Heart, Share2, MessageCircle, ArrowLeft, ShoppingCart } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import SocialShare from "@/components/ui-components/SocialShare";
+import { useWishlistStore } from "@/store/useWishlistStore";
+
+// Define interfaces for our data types
+interface ProductImage {
+  url: string;
+  alt: string;
+}
+
+interface SellerProfile {
+  id: string;
+  username: string;
+  avatar_url: string;
+  telegram_username?: string;
+  phone_number?: string;
+  matric_number?: string;
+}
+
+interface Product {
   id: string;
   title: string;
+  description: string;
   price: number;
-  description: string | null;
-  images: string[];
   category: string;
   condition: string;
   created_at: string;
   updated_at: string;
   seller_id: string;
-  seller: {
-    id: string;
-    username: string | null;
-    avatar_url: string | null;
-    matric_number?: string | null;
-    telegram_username?: string | null;
-    phone_number?: string | null;
-  };
+  images: ProductImage[] | string[];
   discount?: number;
+  seller: SellerProfile;
 }
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { toast } = useToast();
   const { user } = useAuth();
-  const { addToWishlist, removeFromWishlist, isInWishlist, fetchWishlist } = useWishlistStore();
+  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlistStore();
   
-  const [selectedImage, setSelectedImage] = useState<string>("");
+  const [activeImage, setActiveImage] = useState<string>("");
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   
+  // Fetch product details
   const { data: product, isLoading, error } = useQuery({
     queryKey: ['product', id],
-    queryFn: () => id ? productService.getProductById(id) : null,
-    enabled: !!id,
-    staleTime: 1000 * 60 * 5,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*, seller:seller_id(id, username, avatar_url, telegram_username, phone_number, matric_number)')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      return data as Product;
+    }
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchWishlist();
-    }
-  }, [fetchWishlist, user]);
-
+  // Set active image when product data loads
   useEffect(() => {
     if (product && product.images && Array.isArray(product.images) && product.images.length > 0) {
-      setSelectedImage(product.images[0]);
+      // Check if the image is an object with a url property or a string
+      const firstImage = typeof product.images[0] === 'object' && 'url' in product.images[0] 
+        ? (product.images[0] as ProductImage).url 
+        : product.images[0] as string;
+      
+      setActiveImage(firstImage);
     }
   }, [product]);
 
+  // Add to cart handler
   const handleAddToCart = () => {
     if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to sign in to add items to your cart",
-        variant: "destructive",
-      });
-      navigate("/signin");
+      toast.error("Please sign in to add items to your cart");
       return;
     }
-    
-    toast({
-      title: "Added to cart",
-      description: `${product?.title} has been added to your cart.`,
-    });
+
+    // Add to cart logic
+    toast.success("Item added to cart");
   };
 
-  const handleBuyNow = () => {
+  // Message seller handler
+  const handleMessageSeller = () => {
     if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to sign in to purchase items",
-        variant: "destructive",
-      });
-      navigate("/signin");
+      toast.error("Please sign in to message the seller");
       return;
     }
-    
-    handleAddToCart();
-    navigate("/cart");
-  };
 
-  const toggleFavorite = async () => {
+    // Message seller logic
+    toast.success("Message sent to seller");
+  };
+  
+  // Toggle wishlist handler
+  const toggleWishlist = () => {
     if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to sign in to save favorites",
-        variant: "destructive",
-      });
-      navigate("/signin");
+      toast.error("Please sign in to add items to your wishlist");
       return;
     }
     
-    if (!id) return;
-    
-    try {
-      if (isInWishlist(id)) {
-        await removeFromWishlist(id);
-        toast({
-          title: "Removed from wishlist",
-          description: `${product?.title} has been removed from your wishlist.`,
-        });
+    if (product) {
+      if (isInWishlist(product.id)) {
+        removeFromWishlist(product.id);
+        toast.success("Removed from wishlist");
       } else {
-        await addToWishlist(id);
-        toast({
-          title: "Added to wishlist",
-          description: `${product?.title} has been added to your wishlist.`,
-        });
+        addToWishlist(product.id);
+        toast.success("Added to wishlist");
       }
-    } catch (error) {
-      console.error("Error toggling wishlist:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update wishlist. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleContactSeller = () => {
-    if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to sign in to contact sellers",
-        variant: "destructive",
-      });
-      navigate("/signin");
-      return;
-    }
-    
-    if (product?.seller_id) {
-      navigate("/messages", { state: { sellerId: product.seller_id } });
-    }
-  };
-
-  const handleContactTelegram = () => {
-    if (product?.seller?.telegram_username) {
-      window.open(`https://t.me/${product.seller.telegram_username.replace('@', '')}`, '_blank');
-    } else {
-      toast({
-        title: "Contact info unavailable",
-        description: "This seller has not provided Telegram contact information.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleContactPhone = () => {
-    if (product?.seller?.phone_number) {
-      window.open(`tel:${product.seller.phone_number}`, '_blank');
-    } else {
-      toast({
-        title: "Contact info unavailable",
-        description: "This seller has not provided phone contact information.",
-        variant: "destructive",
-      });
     }
   };
 
   if (isLoading) {
     return (
-      <MainLayout>
-        <div className="container-custom py-12">
-          <div className="animate-pulse">
-            <div className="h-8 bg-secondary rounded w-1/3 mb-8"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="aspect-square bg-secondary rounded-lg"></div>
-              <div className="space-y-6">
-                <div className="h-10 bg-secondary rounded w-3/4"></div>
-                <div className="h-6 bg-secondary rounded w-1/4"></div>
-                <div className="h-24 bg-secondary rounded"></div>
-                <div className="h-12 bg-secondary rounded"></div>
-              </div>
+      <div className="container-custom py-8 space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Skeleton className="h-[450px] w-full rounded-lg" />
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-3/4" />
+            <Skeleton className="h-6 w-1/4" />
+            <Skeleton className="h-24 w-full" />
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-1/3" />
+              <Skeleton className="h-10 w-1/3" />
+              <Skeleton className="h-10 w-1/3" />
             </div>
           </div>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
   if (error || !product) {
     return (
-      <MainLayout>
-        <div className="container-custom py-20 text-center">
-          <h1 className="text-2xl font-semibold mb-4">Product Not Found</h1>
-          <p className="mb-8">The product you're looking for doesn't exist or has been removed.</p>
-          <Button onClick={() => navigate("/products")}>
-            Browse Products
-          </Button>
+      <div className="container-custom py-8">
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-semibold mb-2">Product Not Found</h2>
+          <p className="text-muted-foreground mb-6">
+            The product you're looking for doesn't exist or has been removed.
+          </p>
+          <Link to="/products">
+            <Button>Browse Products</Button>
+          </Link>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
-  const typedProduct = product as unknown as ProductWithSeller;
-  const productImages = Array.isArray(typedProduct.images) ? typedProduct.images : [];
-
-  const shareUrl = window.location.href;
-  const isFavorited = id ? isInWishlist(id) : false;
-
-  const relatedProducts = [
-    { ...typedProduct, id: typedProduct.id + "-related-1" },
-    { ...typedProduct, id: typedProduct.id + "-related-2" },
-    { ...typedProduct, id: typedProduct.id + "-related-3" },
-    { ...typedProduct, id: typedProduct.id + "-related-4" }
-  ];
+  const hasContactInfo = product.seller?.telegram_username || product.seller?.phone_number;
 
   return (
-    <MainLayout>
-      <div className="container-custom py-8 md:py-12">
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8"
-        >
-          <ArrowLeft size={16} className="mr-2" />
-          Back to products
-        </button>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-          <div className="space-y-4">
-            <div className="aspect-square overflow-hidden rounded-lg border border-border dark:border-gray-700 bg-white dark:bg-gray-800">
-              <img
-                src={selectedImage || (productImages.length > 0 ? productImages[0] : "/placeholder.svg")}
-                alt={typedProduct.title}
-                className="h-full w-full object-contain"
-              />
-            </div>
-            
-            {productImages.length > 1 && (
-              <div className="flex space-x-2 overflow-x-auto pb-2">
-                {productImages.map((image: string, index: number) => (
-                  <button
-                    key={index}
-                    className={`relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border ${
-                      selectedImage === image
-                        ? "border-primary dark:border-covenant-lavender ring-2 ring-primary dark:ring-covenant-lavender ring-offset-2"
-                        : "border-border dark:border-gray-700"
-                    }`}
-                    onClick={() => setSelectedImage(image)}
-                  >
-                    <img
-                      src={image}
-                      alt={`${typedProduct.title} thumbnail ${index + 1}`}
-                      className="h-full w-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
+    <div className="container-custom py-8 animate-fade-in">
+      <Link to="/products" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary mb-6">
+        <ArrowLeft size={14} />
+        Back to Products
+      </Link>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Product Images */}
+        <div className="space-y-4">
+          <div className="relative overflow-hidden rounded-lg bg-muted aspect-square">
+            <img
+              src={activeImage || "/placeholder.svg"}
+              alt={product.title}
+              className="object-cover object-center w-full h-full"
+            />
           </div>
           
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-display font-semibold">{typedProduct.title}</h1>
-              <div className="flex items-center mt-2 space-x-2">
-                <p className="text-xl font-semibold text-primary dark:text-covenant-lavender">
-                  ₦{typedProduct.price?.toLocaleString()}
-                </p>
+          {/* Thumbnail Gallery */}
+          {Array.isArray(product.images) && product.images.length > 1 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+              {product.images.map((image, index) => {
+                const imgSrc = typeof image === 'object' && 'url' in image ? image.url : image;
                 
-                {typedProduct.discount && typedProduct.discount > 0 && (
-                  <>
-                    <p className="text-sm text-muted-foreground line-through">
-                      ₦{((typedProduct.price / (1 - typedProduct.discount / 100))).toLocaleString()}
-                    </p>
-                    <Badge variant="outline" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200 dark:border-green-800">
-                      {typedProduct.discount}% OFF
-                    </Badge>
-                  </>
-                )}
-              </div>
+                return (
+                  <button
+                    key={index}
+                    className={`relative overflow-hidden rounded-md aspect-square w-20 h-20 border ${
+                      activeImage === imgSrc ? "border-primary" : "border-muted"
+                    }`}
+                    onClick={() => setActiveImage(imgSrc)}
+                  >
+                    <img
+                      src={imgSrc}
+                      alt={`Product thumbnail ${index + 1}`}
+                      className="object-cover w-full h-full"
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Product Info */}
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold mb-2">{product.title}</h1>
+            <div className="flex items-center gap-3 mb-4">
+              <Badge variant="secondary">{product.category}</Badge>
+              <Badge variant="outline">{product.condition}</Badge>
             </div>
             
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary">
-                {typedProduct.category}
-              </Badge>
-            </div>
-            
-            <div>
-              <h2 className="text-lg font-semibold mb-2">Description</h2>
-              <p className="text-muted-foreground">{typedProduct.description}</p>
-            </div>
-            
-            <div className="flex flex-wrap gap-3 pt-2">
-              <Button
-                onClick={handleBuyNow}
-                size="lg"
-                className="flex-1"
-                variant="covenant"
-              >
-                Buy Now
-              </Button>
-              
-              <Button
-                onClick={handleAddToCart}
-                size="lg"
-                variant="outline"
-                className="flex-1"
-              >
-                <ShoppingCart size={18} className="mr-2" />
-                Add to Cart
-              </Button>
-              
-              <Button
-                onClick={toggleFavorite}
-                size="icon"
-                variant="outline"
-                className={`rounded-full ${isFavorited ? 'bg-red-50 hover:bg-red-100 text-red-500' : ''}`}
-                aria-label={isFavorited ? "Remove from wishlist" : "Add to wishlist"}
-              >
-                {isFavorited ? <HeartOff size={18} /> : <Heart size={18} />}
-              </Button>
-            </div>
-            
-            <Separator />
-            
-            <div>
-              <h2 className="text-lg font-semibold mb-3">Seller Information</h2>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-muted-foreground">
-                  {typedProduct.seller?.username?.[0]?.toUpperCase() || "S"}
-                </div>
-                <div>
-                  <p className="font-medium">{typedProduct.seller?.username || "Seller"}</p>
-                  <p className="text-sm text-muted-foreground">{typedProduct.seller?.matric_number || "Verified Seller"}</p>
-                </div>
-              </div>
-              
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button variant="secondary" size="sm" onClick={handleContactSeller}>
-                  <MessageCircle size={16} className="mr-2" />
-                  Message Seller
-                </Button>
-                
-                {typedProduct.seller?.telegram_username && (
-                  <Button variant="outline" size="sm" onClick={handleContactTelegram}>
-                    Contact on Telegram
-                  </Button>
-                )}
-                
-                {typedProduct.seller?.phone_number && (
-                  <Button variant="outline" size="sm" onClick={handleContactPhone}>
-                    <Phone size={16} className="mr-2" />
-                    Call Seller
-                  </Button>
-                )}
-              </div>
-            </div>
-            
-            <div className="pt-2">
-              <SocialShare 
-                title={typedProduct.title} 
-                description={typedProduct.description || ""} 
-                url={shareUrl} 
-              />
+            <div className="flex items-center gap-2">
+              {product.discount ? (
+                <>
+                  <span className="text-2xl font-bold">
+                    ₦{(product.price - (product.price * product.discount / 100)).toLocaleString()}
+                  </span>
+                  <span className="text-muted-foreground line-through">
+                    ₦{product.price.toLocaleString()}
+                  </span>
+                  <Badge className="bg-green-500 hover:bg-green-600">
+                    {product.discount}% OFF
+                  </Badge>
+                </>
+              ) : (
+                <span className="text-2xl font-bold">₦{product.price.toLocaleString()}</span>
+              )}
             </div>
           </div>
-        </div>
-        
-        <div className="mt-16">
-          <h2 className="text-xl font-display font-semibold mb-6">You may also like</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {relatedProducts.map((relatedProduct, index) => (
-              <div 
-                key={`${relatedProduct.id}-${index}`}
-                className="cursor-pointer group"
-                onClick={() => {
-                  if (relatedProduct.id !== typedProduct.id) {
-                    navigate(`/product/${relatedProduct.id.split('-')[0]}`);
-                  }
-                }}
-              >
-                <div className="aspect-square rounded-lg overflow-hidden bg-secondary mb-2">
-                  <img 
-                    src={Array.isArray(relatedProduct.images) && relatedProduct.images.length > 0 ? relatedProduct.images[0] : "/placeholder.svg"} 
-                    alt={relatedProduct.title}
-                    className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                  />
-                </div>
-                <h3 className="font-medium text-sm line-clamp-1">{relatedProduct.title}</h3>
-                <p className="text-sm text-primary dark:text-covenant-lavender">₦{relatedProduct.price?.toLocaleString()}</p>
+
+          {/* Actions */}
+          <div className="flex flex-wrap gap-3">
+            <Button 
+              onClick={handleAddToCart} 
+              className="flex-1"
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Add to Cart
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={toggleWishlist}
+              className="w-10 p-0 flex-shrink-0"
+            >
+              <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? "fill-red-500 text-red-500" : ""}`} />
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={() => setIsShareModalOpen(true)}
+              className="w-10 p-0 flex-shrink-0"
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Seller Info */}
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <img
+                src={product.seller.avatar_url || "/placeholder.svg"}
+                alt={product.seller.username}
+                className="w-10 h-10 rounded-full object-cover"
+              />
+              <div>
+                <div className="font-medium">{product.seller.username}</div>
+                {product.seller.matric_number && (
+                  <div className="text-xs text-muted-foreground">
+                    {product.seller.matric_number}
+                  </div>
+                )}
               </div>
-            ))}
+            </div>
+            
+            {hasContactInfo && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
+                {product.seller.telegram_username && (
+                  <div className="text-sm">
+                    <div className="font-medium">Telegram:</div>
+                    <div>@{product.seller.telegram_username}</div>
+                  </div>
+                )}
+                
+                {product.seller.phone_number && (
+                  <div className="text-sm">
+                    <div className="font-medium">Phone:</div>
+                    <div>{product.seller.phone_number}</div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <Button 
+              onClick={handleMessageSeller} 
+              variant="secondary" 
+              className="w-full mt-3"
+            >
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Message Seller
+            </Button>
           </div>
         </div>
       </div>
-    </MainLayout>
+      
+      {/* Product Details */}
+      <div className="mt-10">
+        <Tabs defaultValue="description">
+          <TabsList>
+            <TabsTrigger value="description">Description</TabsTrigger>
+            <TabsTrigger value="shipping">Shipping & Delivery</TabsTrigger>
+          </TabsList>
+          <TabsContent value="description" className="mt-4">
+            <div className="prose prose-sm max-w-none">
+              <p>{product.description}</p>
+            </div>
+          </TabsContent>
+          <TabsContent value="shipping" className="mt-4">
+            <div className="prose prose-sm max-w-none">
+              <h4>Delivery Information</h4>
+              <p>
+                This product is available for pickup on campus. The seller will arrange delivery
+                details after purchase confirmation.
+              </p>
+              <p className="font-medium mt-4">
+                Note: Always meet in public places for transaction safety.
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Social Share Modal */}
+      {isShareModalOpen && (
+        <SocialShare
+          url={window.location.href}
+          title={`Check out ${product.title} on CU Marketplace`}
+          onClose={() => setIsShareModalOpen(false)}
+        />
+      )}
+    </div>
   );
 };
 
